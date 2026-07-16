@@ -1,8 +1,19 @@
-import { useContext } from 'preact/hooks';
+import {useContext, useState} from 'preact/hooks';
 import { AuthContext } from '../../context/AuthContext';
+import {SearchContext} from "../../context/SearchContext.tsx";
 
 export function TopBar() {
-    const { isAuthenticated, logout, login } = useContext(AuthContext);
+    const { isAuthenticated, logout } = useContext(AuthContext);
+    const { setSearchQuery } = useContext(SearchContext);
+    const [localInput, setLocalInput] = useState('');
+
+    const executeSearch = () => {
+        setSearchQuery(localInput);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter') executeSearch();
+    };
 
     return (
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-400 bg-white">
@@ -18,12 +29,20 @@ export function TopBar() {
                 <nav>
                     <a href="/" className="text-gray-800 font-medium hover:text-black">Početna</a>
                 </nav>
-                <div className="relative ml-4">
+                <div className="relative ml-4 flex items-center">
                     <input
                         type="text"
+                        value={localInput}
+                        onInput={(e) => setLocalInput((e.target as HTMLInputElement).value)}
+                        onKeyDown={handleKeyDown}
                         className="border border-gray-600 rounded px-3 py-1 text-sm w-64 focus:outline-none focus:border-blue-500"
                     />
-                    <span className="absolute right-2 top-1 text-gray-500 cursor-pointer">⌕</span>
+                    <button
+                        onClick={executeSearch}
+                        className="absolute right-2 text-gray-500 cursor-pointer bg-transparent border-none"
+                    >
+                        ⌕
+                    </button>
                 </div>
             </div>
 
@@ -36,12 +55,9 @@ export function TopBar() {
                         Odjava
                     </button>
                 ) : (
-                    <button
-                        onClick={() => login({ id: '1', initials: 'AV', fullName: 'Ana Vidović', role: 'Restorer' })}
-                        className="text-gray-800 font-medium hover:text-black"
-                    >
-                        Prijava (Test Login)
-                    </button>
+                    <a href="/prijava" className="text-gray-800 font-medium hover:text-black">
+                        Prijava
+                    </a>
                 )}
             </div>
         </div>
