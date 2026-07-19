@@ -1,14 +1,30 @@
-import {useContext, useState} from 'preact/hooks';
+import {useContext, useEffect, useState} from 'preact/hooks';
 import { AuthContext } from '../../context/AuthContext';
-import {SearchContext} from "../../context/SearchContext.tsx";
+import {route} from "preact-router";
 
 export function TopBar() {
     const { isAuthenticated, logout } = useContext(AuthContext);
-    const { setSearchQuery } = useContext(SearchContext);
     const [localInput, setLocalInput] = useState('');
 
+    // Synchronize the local input field if the URL changes (e.g., via browser back button)
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            setLocalInput(params.get('search') || '');
+        }
+    }, [typeof window !== 'undefined' ? window.location.search : '']);
+
     const executeSearch = () => {
-        setSearchQuery(localInput);
+        const params = new URLSearchParams(window.location.search);
+
+        if (localInput.trim() !== '') {
+            params.set('search', localInput);
+        } else {
+            params.delete('search');
+        }
+
+        params.delete('page'); // Reset to the first page on a new search
+        route(`/?${params.toString()}`);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {

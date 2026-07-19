@@ -1,6 +1,6 @@
-import {useState, useEffect, useContext} from 'preact/hooks';
+import {useState, useEffect} from 'preact/hooks';
+import { route } from 'preact-router';
 import type {Document} from '../types/Document.ts';
-import {SearchContext} from "../context/SearchContext.tsx";
 import {fetchDocuments} from "../api/DocumentApi.ts";
 
 const CATEGORIES = [
@@ -13,14 +13,22 @@ const CATEGORIES = [
     "DIPLOMSKI I SEMINARSKI RADOVI"
 ];
 
-export function Home() {
-    const { searchQuery } = useContext(SearchContext);
+interface HomeProps {
+    url?: string; // Injected automatically by preact-router
+}
+
+export function Home({ url }: HomeProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState<number>(0);
     const [totalPages, setTotalPages] = useState<number>(1);
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
+    // Parse the current state directly from the injected URL
+    const searchParams = new URLSearchParams(url?.split('?')[1] || typeof window !== 'undefined' ? window.location.search : '');
+    const searchQuery = searchParams.get('search') || '';
+    const selectedCategory = searchParams.get('category') || null;
+    const currentPage = parseInt(searchParams.get('page') || '0', 10);
+
+    // API call triggers automatically when the URL parameters change
     useEffect(() => {
         loadDocuments(currentPage, selectedCategory, searchQuery);
     }, [currentPage, selectedCategory, searchQuery]);
@@ -40,8 +48,22 @@ export function Home() {
     };
 
     const handleCategoryClick = (category: string) => {
-        setSelectedCategory(prev => prev === category ? null : category);
-        setCurrentPage(0);
+        const params = new URLSearchParams(searchParams.toString());
+
+        if (selectedCategory === category) {
+            params.delete('category');
+        } else {
+            params.set('category', category);
+        }
+
+        params.delete('page'); // Reset to the first page when changing filters
+        route(`/?${params.toString()}`);
+    };
+
+    const changePage = (newPage: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', newPage.toString());
+        route(`/?${params.toString()}`);
     };
 
     return (
@@ -71,28 +93,29 @@ export function Home() {
                 <div className="flex-1 border-t border-blue-900"></div>
             </div>
 
-            {/* Projects Grid */}
+            {/* Documents Grid */}
             {isLoading ? (
                 <div className="py-20 text-gray-500">Učitavanje...</div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 w-full max-w-6xl">
-                    {documents.map((project) => (
-                        <div key={project.id} className="border border-blue-900 flex flex-col h-80 bg-orange-50">
-                            {/* Image Placeholder */}
+                    {documents.map((doc) => (
+                        <div key={doc.id} className="border border-blue-900 flex flex-col h-80 bg-orange-50">
                             <div className="flex-1 flex items-center justify-center border-b border-blue-900">
                                 <span className="text-4xl text-gray-400">🖼️</span>
                             </div>
 
-                            {/* Project Information */}
                             <div className="p-3 text-xs text-gray-800 flex flex-col gap-1">
-                                <p><span className="font-semibold">Broj OKIRU:</span> {project.content.invNumber}</p>
-                                <p className="truncate"><span className="font-semibold">Naslov:</span> {project.content.name}</p>
-                                <p className="truncate"><span className="font-semibold">Autor:</span> {project.content.author}</p>
-                                <p><span className="font-semibold">Datacija:</span> {project.content.date}</p>
-                                <p className="truncate"><span className="font-semibold">Tehnika:</span> {project.content.technique}</p>
+                                <p><span className="font-semibold">Broj OKIRU:</span> {doc.content.invNumber}</p>
+                                <p className="truncate"><span className="font-semibold">Naslov:</span> {doc.content.name}</p>
+                                <p className="truncate"><span className="font-semibold">Autor:</span> {doc.content.author}</p>
+                                <p><span className="font-semibold">Datacija:</span> {doc.content.date}</p>
+                                <p className="truncate"><span className="font-semibold">Tehnika:</span> {doc.content.technique}</p>
                             </div>
                         </div>
                     ))}
+                    {documents.length === 0 && (
+                        <p className="col-span-full text-center text-gray-500 italic py-4">Nema pronađenih dokumenata.</p>
+                    )}
                 </div>
             )}
 
@@ -101,7 +124,7 @@ export function Home() {
                 <div className="mt-12 flex gap-4">
                     <button
                         disabled={currentPage === 0}
-                        onClick={() => setCurrentPage(p => p - 1)}
+                        onClick={() => changePage(currentPage - 1)}
                         className="px-4 py-2 border border-blue-900 bg-white disabled:opacity-50"
                     >
                         Prethodna
@@ -111,7 +134,7 @@ export function Home() {
                     </span>
                     <button
                         disabled={currentPage >= totalPages - 1}
-                        onClick={() => setCurrentPage(p => p + 1)}
+                        onClick={() => changePage(currentPage + 1)}
                         className="px-4 py-2 border border-blue-900 bg-white disabled:opacity-50"
                     >
                         Sljedeća
