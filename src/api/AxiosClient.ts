@@ -32,10 +32,14 @@ axiosClient.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response && error.response.status === 401) {
-            // Handle token expiration globally (e.g., clear storage and redirect to login)
-            console.error("Authentication required. Redirecting to login.");
+        if (error.response && error.response.status === 401 || error.response.status === 403) {
+            console.error("Session expired or access denied. Redirecting to login.");
+
+            // Completely wipe the dead session data
             localStorage.removeItem('jwt_token');
+            localStorage.removeItem('user_data');
+
+            // Force redirect to the login page
             window.location.href = '/prijava';
         }
         return Promise.reject(error);
