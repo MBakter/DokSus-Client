@@ -2,6 +2,7 @@ import {useState, useEffect} from 'preact/hooks';
 import { route } from 'preact-router';
 import type {Document} from '../types/Document.ts';
 import {fetchDocuments} from "../api/DocumentApi.ts";
+import {DocumentCard} from "../components/feature/DocumentCard.tsx";
 
 const CATEGORIES = [
     "DRVENI PREDMETI",
@@ -21,6 +22,8 @@ export function Home({ url }: HomeProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [totalPages, setTotalPages] = useState<number>(1);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+
+    const [isCategoriesOpen, setIsCategoriesOpen] = useState<boolean>(true);
 
     // Parse the current state directly from the injected URL
     const searchParams = new URLSearchParams(url?.split('?')[1] || typeof window !== 'undefined' ? window.location.search : '');
@@ -54,6 +57,7 @@ export function Home({ url }: HomeProps) {
             params.delete('category');
         } else {
             params.set('category', category);
+            setIsCategoriesOpen(false);
         }
 
         params.delete('page'); // Reset to the first page when changing filters
@@ -69,52 +73,64 @@ export function Home({ url }: HomeProps) {
     return (
         <div className="w-full flex flex-col items-center">
 
-            {/* Top Categories Grid */}
-            <div className="flex flex-wrap justify-center gap-6 mb-10 w-full max-w-5xl">
-                {CATEGORIES.map((cat) => (
-                    <button
-                        key={cat}
-                        onClick={() => handleCategoryClick(cat)}
-                        className={`w-48 h-56 flex items-center justify-center text-center p-4 border border-blue-900 transition-colors duration-200
-                            ${selectedCategory === cat ? 'bg-blue-200' : 'bg-blue-50 hover:bg-blue-100'}
-                        `}
+            {/* Interactive Title Header / Divider */}
+            <div
+                className="w-full max-w-6xl flex items-center mt-4 mb-6 cursor-pointer group"
+                onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
+                title={isCategoriesOpen ? "Zatvori kategorije" : "Otvori kategorije"}
+            >
+                <div className="flex-1 border-t border-blue-900 transition-colors group-hover:border-blue-600"></div>
+                <div className="px-4 text-gray-800 font-medium flex items-center gap-2 transition-colors group-hover:text-blue-600 select-none">
+                    <span>{selectedCategory ? selectedCategory : "Sve Kategorije"}</span>
+                    <span
+                        className={`text-xs transform transition-transform duration-300 ease-in-out ${isCategoriesOpen ? 'rotate-180' : 'rotate-0'}`}
                     >
-                        <span className="font-medium text-gray-800 text-sm">{cat}</span>
-                    </button>
-                ))}
+                        ▼
+                    </span>
+                </div>
+                <div className="flex-1 border-t border-blue-900 transition-colors group-hover:border-blue-600"></div>
             </div>
 
-            {/* Divider Line */}
-            <div className="w-full max-w-6xl flex items-center mb-8">
-                <div className="flex-1 border-t border-blue-900"></div>
-                <span className="px-4 text-gray-800 font-medium">
-                    {selectedCategory ? selectedCategory : "Sve"}
-                </span>
-                <div className="flex-1 border-t border-blue-900"></div>
+            {/* Animated Categories Grid Wrapper */}
+            <div
+                className={`grid transition-[grid-template-rows] duration-500 ease-in-out w-full max-w-5xl ${
+                    isCategoriesOpen ? 'grid-rows-[1fr] mb-8' : 'grid-rows-[0fr] mb-0'
+                }`}
+            >
+                <div className="overflow-hidden w-full flex flex-wrap justify-center gap-6">
+                    <div className="flex flex-wrap justify-center gap-6 w-full pb-2 pt-2">
+                        {CATEGORIES.map((cat) => (
+                            <button
+                                key={cat}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCategoryClick(cat);
+                                }}
+                                // Redesigned Category Buttons
+                                className={`w-48 h-40 flex items-center justify-center text-center p-4 border rounded-md shadow-sm transition-all duration-200
+                                    ${selectedCategory === cat
+                                    ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-700 text-blue-900 font-bold shadow-md'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:shadow hover:text-blue-800'
+                                }
+                                `}
+                            >
+                                <span className="text-sm tracking-wide leading-relaxed">{cat}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* Documents Grid */}
             {isLoading ? (
-                <div className="py-20 text-gray-500">Učitavanje...</div>
+                <div className="py-20 text-slate-500 font-medium">Učitavanje...</div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 w-full max-w-6xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-6xl">
                     {documents.map((doc) => (
-                        <div key={doc.id} className="border border-blue-900 flex flex-col h-80 bg-orange-50">
-                            <div className="flex-1 flex items-center justify-center border-b border-blue-900">
-                                <span className="text-4xl text-gray-400">🖼️</span>
-                            </div>
-
-                            <div className="p-3 text-xs text-gray-800 flex flex-col gap-1">
-                                <p><span className="font-semibold">Broj OKIRU:</span> {doc.content.invNumber}</p>
-                                <p className="truncate"><span className="font-semibold">Naslov:</span> {doc.content.name}</p>
-                                <p className="truncate"><span className="font-semibold">Autor:</span> {doc.content.author}</p>
-                                <p><span className="font-semibold">Datacija:</span> {doc.content.date}</p>
-                                <p className="truncate"><span className="font-semibold">Tehnika:</span> {doc.content.technique}</p>
-                            </div>
-                        </div>
+                        <DocumentCard key={doc.id} document={doc} showAuthorIcon={true} />
                     ))}
                     {documents.length === 0 && (
-                        <p className="col-span-full text-center text-gray-500 italic py-4">Nema pronađenih dokumenata.</p>
+                        <p className="col-span-full text-center text-slate-500 italic py-4">Nema pronađenih dokumenata.</p>
                     )}
                 </div>
             )}
@@ -125,17 +141,17 @@ export function Home({ url }: HomeProps) {
                     <button
                         disabled={currentPage === 0}
                         onClick={() => changePage(currentPage - 1)}
-                        className="px-4 py-2 border border-blue-900 bg-white disabled:opacity-50"
+                        className="px-4 py-2 border border-blue-900 bg-white disabled:opacity-50 transition-opacity cursor-pointer"
                     >
                         Prethodna
                     </button>
-                    <span className="px-4 py-2 text-gray-800">
+                    <span className="px-4 py-2 text-gray-800 font-medium">
                         Stranica {currentPage + 1} od {totalPages}
                     </span>
                     <button
                         disabled={currentPage >= totalPages - 1}
                         onClick={() => changePage(currentPage + 1)}
-                        className="px-4 py-2 border border-blue-900 bg-white disabled:opacity-50"
+                        className="px-4 py-2 border border-blue-900 bg-white disabled:opacity-50 transition-opacity cursor-pointer"
                     >
                         Sljedeća
                     </button>
