@@ -6,6 +6,7 @@ import {Login} from "./pages/Login.tsx";
 import {Register} from "./pages/Register.tsx";
 import {Account} from "./pages/Account.tsx";
 import {PublicProfile} from "./pages/PublicProfile.tsx";
+import {DocumentEditor} from "./pages/DocumentEditor.tsx";
 
 
 export function App() {
@@ -18,6 +19,7 @@ export function App() {
                     <Route path="/registracija" component={Register} />
                     <Route path="/racun" component={Account} />
                     <Route path="/profil/:email" component={PublicProfile} />
+                    <Route path="/novo" component={DocumentEditor} />
                 </Router>
             </Layout>
         </AuthProvider>
