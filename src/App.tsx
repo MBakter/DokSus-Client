@@ -5,6 +5,7 @@ import Router, {Route} from "preact-router";
 import {Login} from "./pages/Login.tsx";
 import {Register} from "./pages/Register.tsx";
 import {Account} from "./pages/Account.tsx";
+import {PublicProfile} from "./pages/PublicProfile.tsx";
 
 
 export function App() {
@@ -16,6 +17,7 @@ export function App() {
                     <Route path="/prijava" component={Login} />
                     <Route path="/registracija" component={Register} />
                     <Route path="/racun" component={Account} />
+                    <Route path="/profil/:email" component={PublicProfile} />
                 </Router>
             </Layout>
         </AuthProvider>

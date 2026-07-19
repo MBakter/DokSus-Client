@@ -1,7 +1,7 @@
 import {useState, useEffect} from 'preact/hooks';
 import { route } from 'preact-router';
 import type {Document} from '../types/Document.ts';
-import {fetchDocuments} from "../api/DocumentApi.ts";
+import {fetchDocuments} from "../api/feature/DocumentApi.ts";
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
 
 const CATEGORIES = [

@@ -1,3 +1,5 @@
+import type {UserProfile} from "./UserProfile.ts";
+
 export interface Document {
     id: string;
     isPublished: boolean;
@@ -5,6 +7,7 @@ export interface Document {
     creationDate: string;
     publicationDate: string;
     content: DocumentContent;
+    ownerProfile?: UserProfile;
 }
 
 export interface DocumentContent {
