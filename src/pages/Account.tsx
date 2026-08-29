@@ -6,7 +6,7 @@ import {DocumentCard} from "../components/feature/DocumentCard.tsx";
 import {route} from "preact-router";
 
 export function Account() {
-    const { user, logout } = useContext(AuthContext);
+    const { user } = useContext(AuthContext);
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -53,20 +53,9 @@ export function Account() {
         <div className="w-full flex flex-col items-center pb-12">
 
             {/* User Data Header */}
-            <div className="w-full max-w-6xl bg-white border border-slate-200 rounded-md p-6 mb-10 flex justify-between items-start shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold text-blue-900 mb-4 tracking-tight">{user.name} {user.surname}</h1>
-                    <div className="flex flex-col gap-2 text-sm text-slate-700">
-                        <p><span className="font-semibold text-slate-900 w-20 inline-block">Email:</span> {user.email}</p>
-                    </div>
+                    <h1 className="text-2xl font-bold text-blue-900 mb-8 tracking-tight">Moji projekti</h1>
                 </div>
-                <button
-                    onClick={logout}
-                    className="px-6 py-2 bg-blue-900 text-white font-medium rounded hover:bg-blue-800 transition-colors shadow-sm"
-                >
-                    Odjava
-                </button>
-            </div>
 
             {isLoading ? (
                 <div className="py-20 text-slate-500 font-medium">Učitavanje dokumenata...</div>
