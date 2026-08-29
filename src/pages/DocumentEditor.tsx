@@ -508,15 +508,12 @@ export function DocumentEditor({id}: DocumentEditorProps) {
                     </div>
                 </section>
 
-                {/* BOTTOM SECTION: Detailed Attachments */}
-                <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
-                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Dokumentacija i
-                        Prilozi</h2>
+                {/* --- FILE SECTIONS --- */}
 
-                    {/* PDF (Now Full Width) */}
-                    <div className="mb-8 border border-slate-200 rounded-md p-6 bg-slate-50">
-                        <h3 className="font-semibold text-lg text-slate-800 mb-3">Glavni Dokument (PDF) <span
-                            className="text-red-500">*</span></h3>
+                {/* Section 5: PDF */}
+                <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
+                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Glavni Dokument (PDF) <span className="text-red-500">*</span></h2>
+                    <div className="border border-slate-200 rounded-md p-6 bg-slate-50">
                         {serverPaths.pdf && !files.pdf && (
                             <a href={getDownloadUrl(serverPaths.pdf)} target="_blank"
                                className="text-sm text-blue-700 font-medium underline block mb-3">📄 Preuzmi trenutni
@@ -531,266 +528,265 @@ export function DocumentEditor({id}: DocumentEditorProps) {
                         {files.pdf &&
                             <p className="text-sm text-green-600 font-medium mt-3">Pripremljeno: {files.pdf.name}</p>}
                     </div>
+                </section>
 
-                    {/* Multiple Files: Project Photos */}
-                    <div className="mb-8 border-t border-slate-100 pt-8">
-                        <h3 className="font-semibold text-lg text-slate-800 mb-4">Fotografije projekta</h3>
+                {/* Section 6: Fotografije projekta */}
+                <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
+                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Fotografije projekta</h2>
 
-                        {serverPaths.projectPhotos.length > 0 && (
-                            <div className="flex flex-col mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    {serverPaths.projectPhotos.length > 0 && (
+                        <div className="flex flex-col mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
 
-                                {/* Sliding Container */}
-                                <div className="overflow-hidden w-full mb-6">
-                                    <div
-                                        className="flex transition-transform duration-500 ease-in-out"
-                                        style={{transform: `translateX(-${photoPage * 100}%)`}}
-                                    >
-                                        {/* Render ALL photos, CSS transform handles the paging */}
-                                        {serverPaths.projectPhotos.map((photo, index) => (
-                                            <div key={index} className="w-full md:w-1/3 flex-shrink-0 px-2">
+                            {/* Sliding Container */}
+                            <div className="overflow-hidden w-full mb-6">
+                                <div
+                                    className="flex transition-transform duration-500 ease-in-out"
+                                    style={{transform: `translateX(-${photoPage * 100}%)`}}
+                                >
+                                    {/* Render ALL photos, CSS transform handles the paging */}
+                                    {serverPaths.projectPhotos.map((photo, index) => (
+                                        <div key={index} className="w-full md:w-1/3 flex-shrink-0 px-2">
+                                            <div
+                                                className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden h-full">
+                                                {/* Image Thumbnail */}
                                                 <div
-                                                    className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden h-full">
-                                                    {/* Image Thumbnail */}
-                                                    <div
-                                                        className="relative group cursor-pointer aspect-[4/3] bg-black overflow-hidden"
-                                                        onClick={() => setLightboxIndex(index)}
-                                                    >
-                                                        <img
-                                                            src={getDownloadUrl(photo.path)}
-                                                            alt="preview"
-                                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                        />
-                                                    </div>
-                                                    {/* Edit Name Area (Multi-line) */}
-                                                    <div className="p-2 border-t border-slate-200 flex-1 flex flex-col">
-                                                        <textarea
-                                                            value={photo.name}
-                                                            onChange={(e) => handleUpdateServerPhotoName(index, (e.target as HTMLTextAreaElement).value)}
-                                                            className="w-full text-sm font-medium text-slate-700 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1 flex-1"
-                                                            rows={2}
-                                                            placeholder="Unesite naziv"
-                                                        />
-                                                    </div>
+                                                    className="relative group cursor-pointer aspect-[4/3] bg-black overflow-hidden"
+                                                    onClick={() => setLightboxIndex(index)}
+                                                >
+                                                    <img
+                                                        src={getDownloadUrl(photo.path)}
+                                                        alt="preview"
+                                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    />
+                                                </div>
+                                                {/* Edit Name Area (Multi-line) */}
+                                                <div className="p-2 border-t border-slate-200 flex-1 flex flex-col">
+                                                    <textarea
+                                                        value={photo.name}
+                                                        onChange={(e) => handleUpdateServerPhotoName(index, (e.target as HTMLTextAreaElement).value)}
+                                                        className="w-full text-sm font-medium text-slate-700 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1 flex-1"
+                                                        rows={2}
+                                                        placeholder="Unesite naziv"
+                                                    />
                                                 </div>
                                             </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-6">
+                                    <button
+                                        onClick={() => setPhotoPage(p => Math.max(0, p - 1))}
+                                        disabled={photoPage === 0}
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
+                                    >
+                                        <span className="text-xl font-bold">←</span>
+                                    </button>
+
+                                    <div className="flex gap-2">
+                                        {Array.from({length: totalPages}).map((_, idx) => (
+                                            <div
+                                                key={idx}
+                                                onClick={() => setPhotoPage(idx)}
+                                                className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-colors ${idx === photoPage ? 'bg-blue-600' : 'bg-slate-300 hover:bg-slate-400'}`}
+                                            />
                                         ))}
                                     </div>
+
+                                    <button
+                                        onClick={() => setPhotoPage(p => Math.min(totalPages - 1, p + 1))}
+                                        disabled={photoPage === totalPages - 1}
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
+                                    >
+                                        <span className="text-xl font-bold">→</span>
+                                    </button>
                                 </div>
+                            )}
+                        </div>
+                    )}
 
-                                {/* Pagination Controls */}
-                                {totalPages > 1 && (
-                                    <div className="flex items-center justify-center gap-6">
-                                        <button
-                                            onClick={() => setPhotoPage(p => Math.max(0, p - 1))}
-                                            disabled={photoPage === 0}
-                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
-                                        >
-                                            <span className="text-xl font-bold">←</span>
-                                        </button>
-
-                                        <div className="flex gap-2">
-                                            {Array.from({length: totalPages}).map((_, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => setPhotoPage(idx)}
-                                                    className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-colors ${idx === photoPage ? 'bg-blue-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-                                                />
-                                            ))}
-                                        </div>
-
-                                        <button
-                                            onClick={() => setPhotoPage(p => Math.min(totalPages - 1, p + 1))}
-                                            disabled={photoPage === totalPages - 1}
-                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
-                                        >
-                                            <span className="text-xl font-bold">→</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* List for staging new photos with Multi-Line Textareas */}
-                        {files.projectPhotos.map((item, index) => (
-                            <div key={index}
-                                 className="flex gap-4 mb-4 p-4 bg-blue-50 border border-blue-100 rounded-md">
-                                <img src={item.previewUrl} alt="preview"
-                                     className="w-24 h-24 object-cover rounded border border-slate-300 shadow-sm"/>
-                                <div className="flex-1 flex flex-col justify-between">
-                                    <textarea
-                                        value={item.name}
-                                        placeholder="Unesite opisni naziv fotografije (u više linija)"
-                                        onChange={(e) => handleUpdateFileName('projectPhotos', index, (e.target as HTMLTextAreaElement).value)}
-                                        className="w-full text-sm px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 resize-none h-16"
-                                    />
-                                    <div className="flex justify-between items-end mt-1">
-                                        <span
-                                            className="text-xs text-slate-500 truncate max-w-[200px]">{item.file.name}</span>
-                                        <button onClick={() => handleRemoveFile('projectPhotos', index)}
-                                                className="text-red-500 hover:bg-red-100 text-sm px-3 py-1 rounded transition-colors font-medium">Ukloni
-                                        </button>
-                                    </div>
+                    {/* List for staging new photos with Multi-Line Textareas */}
+                    {files.projectPhotos.map((item, index) => (
+                        <div key={index}
+                             className="flex gap-4 mb-4 p-4 bg-blue-50 border border-blue-100 rounded-md">
+                            <img src={item.previewUrl} alt="preview"
+                                 className="w-24 h-24 object-cover rounded border border-slate-300 shadow-sm"/>
+                            <div className="flex-1 flex flex-col justify-between">
+                                <textarea
+                                    value={item.name}
+                                    placeholder="Unesite opisni naziv fotografije (u više linija)"
+                                    onChange={(e) => handleUpdateFileName('projectPhotos', index, (e.target as HTMLTextAreaElement).value)}
+                                    className="w-full text-sm px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 resize-none h-16"
+                                />
+                                <div className="flex justify-between items-end mt-1">
+                                    <span
+                                        className="text-xs text-slate-500 truncate max-w-[200px]">{item.file.name}</span>
+                                    <button onClick={() => handleRemoveFile('projectPhotos', index)}
+                                            className="text-red-500 hover:bg-red-100 text-sm px-3 py-1 rounded transition-colors font-medium">Ukloni
+                                    </button>
                                 </div>
                             </div>
-                        ))}
+                        </div>
+                    ))}
 
-                        <label
-                            className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
-                            + Dodaj nove fotografije
-                            <input type="file" accept="image/*" multiple className="hidden"
-                                   onChange={handleMultipleFilesChange('projectPhotos')}/>
-                        </label>
-                    </div>
+                    <label
+                        className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
+                        + Dodaj nove fotografije
+                        <input type="file" accept="image/*" multiple className="hidden"
+                               onChange={handleMultipleFilesChange('projectPhotos')}/>
+                    </label>
+                </section>
 
-                    {/* Multiple Files: 3D Models (Paginated Viewer) */}
-                    <div className="border-t border-slate-100 pt-8 mb-8">
-                        <h3 className="font-semibold text-lg text-slate-800 mb-4">3D Modeli</h3>
+                {/* Section 7: 3D Modeli */}
+                <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
+                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">3D Modeli</h2>
 
-                        {totalModels > 0 && (
-                            <div className="flex flex-col mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    {totalModels > 0 && (
+                        <div className="flex flex-col mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
 
+                            <div
+                                className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden mb-4">
+
+                                {/* 3D Model Renderer */}
                                 <div
-                                    className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden mb-4">
-
-                                    {/* 3D Model Renderer */}
-                                    <div
-                                        className="w-full h-[400px] bg-slate-200 relative flex items-center justify-center overflow-hidden">
-                                        {currentModel && (
-                                            isModelSupported ? (
-                                                <model-viewer
-                                                    src={currentModel.isServer ? getDownloadUrl(currentModel.data.path) : currentModel.data.previewUrl}
-                                                    alt={currentModel.data.name}
-                                                    auto-rotate
-                                                    camera-controls
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        backgroundColor: '#f1f5f9',
-                                                        cursor: 'grab'
-                                                    }}
-                                                ></model-viewer>
-                                            ) : (
-                                                <div
-                                                    className="flex flex-col items-center justify-center text-slate-500 w-full h-full text-center p-6">
-                                                    <span className="text-4xl mb-3">🧊</span>
-                                                    <p className="font-semibold text-lg text-slate-700">Format nije
-                                                        podržan za pregled</p>
-                                                    <p className="text-sm mt-1">Samo .glb i .gltf formati mogu biti
-                                                        prikazani u pregledniku.</p>
-                                                    <p className="text-xs mt-2 bg-white px-2 py-1 rounded border border-slate-300">
-                                                        {currentModelFilename.split('/').pop()}
-                                                    </p>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-
-                                    {/* Editor Controls */}
+                                    className="w-full h-[400px] bg-slate-200 relative flex items-center justify-center overflow-hidden">
                                     {currentModel && (
-                                        <div className="p-4 flex flex-col gap-3">
-                        <textarea
-                            value={currentModel.data.name}
-                            onChange={(e) => {
-                                if (currentModel.isServer) {
-                                    handleUpdateServerModelName(currentModel.index, (e.target as HTMLTextAreaElement).value);
-                                } else {
-                                    handleUpdateFileName('models3d', currentModel.index, (e.target as HTMLTextAreaElement).value);
-                                }
-                            }}
-                            className="w-full text-sm font-medium text-slate-700 bg-slate-50 border border-slate-300 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-3"
-                            rows={2}
-                            placeholder="Unesite naziv modela"
-                        />
-                                            <div className="flex justify-between items-center mt-2">
-                                                <div className="flex gap-4">
-                                                    {currentModel.isServer ? (
-                                                        <a href={getDownloadUrl(currentModel.data.path)} target="_blank"
-                                                           className="text-blue-700 hover:underline font-bold text-sm flex items-center gap-1">
-                                                            <span>↓</span> Preuzmi datoteku
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-xs font-medium text-slate-500">Nova datoteka spremna za prijenos: {currentModel.data.file.name}</span>
-                                                    )}
-                                                </div>
-
-                                                <button
-                                                    onClick={() => {
-                                                        if (currentModel.isServer) {
-                                                            handleRemoveServerModel(currentModel.index);
-                                                        } else {
-                                                            handleRemoveFile('models3d', currentModel.index);
-                                                        }
-                                                    }}
-                                                    className="text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 font-bold px-4 py-1.5 rounded text-sm transition-all"
-                                                >
-                                                    Ukloni model
-                                                </button>
+                                        isModelSupported ? (
+                                            <model-viewer
+                                                src={currentModel.isServer ? getDownloadUrl(currentModel.data.path) : currentModel.data.previewUrl}
+                                                alt={currentModel.data.name}
+                                                auto-rotate
+                                                camera-controls
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    backgroundColor: '#f1f5f9',
+                                                    cursor: 'grab'
+                                                }}
+                                            ></model-viewer>
+                                        ) : (
+                                            <div
+                                                className="flex flex-col items-center justify-center text-slate-500 w-full h-full text-center p-6">
+                                                <span className="text-4xl mb-3">🧊</span>
+                                                <p className="font-semibold text-lg text-slate-700">Format nije
+                                                    podržan za pregled</p>
+                                                <p className="text-sm mt-1">Samo .glb i .gltf formati mogu biti
+                                                    prikazani u pregledniku.</p>
+                                                <p className="text-xs mt-2 bg-white px-2 py-1 rounded border border-slate-300">
+                                                    {currentModelFilename.split('/').pop()}
+                                                </p>
                                             </div>
-                                        </div>
+                                        )
                                     )}
                                 </div>
 
-                                {/* Pagination Controls */}
-                                {totalModels > 1 && (
-                                    <div className="flex items-center justify-center gap-6 mt-2">
-                                        <button
-                                            onClick={() => setModelPage(p => Math.max(0, p - 1))}
-                                            disabled={modelPage === 0}
-                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
-                                        >
-                                            <span className="text-xl font-bold">←</span>
-                                        </button>
+                                {/* Editor Controls */}
+                                {currentModel && (
+                                    <div className="p-4 flex flex-col gap-3">
+                                        <textarea
+                                            value={currentModel.data.name}
+                                            onChange={(e) => {
+                                                if (currentModel.isServer) {
+                                                    handleUpdateServerModelName(currentModel.index, (e.target as HTMLTextAreaElement).value);
+                                                } else {
+                                                    handleUpdateFileName('models3d', currentModel.index, (e.target as HTMLTextAreaElement).value);
+                                                }
+                                            }}
+                                            className="w-full text-sm font-medium text-slate-700 bg-slate-50 border border-slate-300 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-3"
+                                            rows={2}
+                                            placeholder="Unesite naziv modela"
+                                        />
+                                        <div className="flex justify-between items-center mt-2">
+                                            <div className="flex gap-4">
+                                                {currentModel.isServer ? (
+                                                    <a href={getDownloadUrl(currentModel.data.path)} target="_blank"
+                                                       className="text-blue-700 hover:underline font-bold text-sm flex items-center gap-1">
+                                                        <span>↓</span> Preuzmi datoteku
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-xs font-medium text-slate-500">Nova datoteka spremna za prijenos: {currentModel.data.file.name}</span>
+                                                )}
+                                            </div>
 
-                                        <div className="flex gap-2">
-                                            {Array.from({length: totalModels}).map((_, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => setModelPage(idx)}
-                                                    className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-colors ${idx === modelPage ? 'bg-blue-600' : 'bg-slate-300 hover:bg-slate-400'}`}
-                                                />
-                                            ))}
+                                            <button
+                                                onClick={() => {
+                                                    if (currentModel.isServer) {
+                                                        handleRemoveServerModel(currentModel.index);
+                                                    } else {
+                                                        handleRemoveFile('models3d', currentModel.index);
+                                                    }
+                                                }}
+                                                className="text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 font-bold px-4 py-1.5 rounded text-sm transition-all"
+                                            >
+                                                Ukloni model
+                                            </button>
                                         </div>
-
-                                        <button
-                                            onClick={() => setModelPage(p => Math.min(totalModels - 1, p + 1))}
-                                            disabled={modelPage === totalModels - 1}
-                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
-                                        >
-                                            <span className="text-xl font-bold">→</span>
-                                        </button>
                                     </div>
                                 )}
                             </div>
-                        )}
 
-                        <label
-                            className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
-                            + Dodaj nove modele
-                            <input type="file" accept=".obj,.gltf,.glb" multiple className="hidden"
-                                   onChange={handleMultipleFilesChange('models3d')}/>
-                        </label>
-                    </div>
+                            {/* Pagination Controls */}
+                            {totalModels > 1 && (
+                                <div className="flex items-center justify-center gap-6 mt-2">
+                                    <button
+                                        onClick={() => setModelPage(p => Math.max(0, p - 1))}
+                                        disabled={modelPage === 0}
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
+                                    >
+                                        <span className="text-xl font-bold">←</span>
+                                    </button>
 
-                    {/* Single File: Video (Moved to the bottom) */}
-                    <div className="border-t border-slate-100 pt-8">
-                        <h3 className="font-semibold text-lg text-slate-800 mb-4">Videozapis</h3>
-                        <div className="border border-slate-200 rounded-md p-6 bg-slate-50">
-                            {serverPaths.video && !files.video && (
-                                <a href={getDownloadUrl(serverPaths.video)} target="_blank"
-                                   className="text-sm text-blue-700 font-medium underline block mb-3">🎥 Preuzmi trenutni
-                                    Video</a>
+                                    <div className="flex gap-2">
+                                        {Array.from({length: totalModels}).map((_, idx) => (
+                                            <div
+                                                key={idx}
+                                                onClick={() => setModelPage(idx)}
+                                                className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-colors ${idx === modelPage ? 'bg-blue-600' : 'bg-slate-300 hover:bg-slate-400'}`}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => setModelPage(p => Math.min(totalModels - 1, p + 1))}
+                                        disabled={modelPage === totalModels - 1}
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
+                                    >
+                                        <span className="text-xl font-bold">→</span>
+                                    </button>
+                                </div>
                             )}
-                            <label
-                                className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-100 transition-colors">
-                                Odaberi Video
-                                <input type="file" accept="video/*" className="hidden"
-                                       onChange={handleSingleFileChange('video')}/>
-                            </label>
-                            {files.video &&
-                                <p className="text-sm text-green-600 font-medium mt-3">Pripremljeno: {files.video.name}</p>}
                         </div>
-                    </div>
+                    )}
 
+                    <label
+                        className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
+                        + Dodaj nove modele
+                        <input type="file" accept=".obj,.gltf,.glb" multiple className="hidden"
+                               onChange={handleMultipleFilesChange('models3d')}/>
+                    </label>
+                </section>
+
+                {/* Section 8: Videozapis */}
+                <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
+                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Videozapis</h2>
+                    <div className="border border-slate-200 rounded-md p-6 bg-slate-50">
+                        {serverPaths.video && !files.video && (
+                            <a href={getDownloadUrl(serverPaths.video)} target="_blank"
+                               className="text-sm text-blue-700 font-medium underline block mb-3">🎥 Preuzmi trenutni
+                                Video</a>
+                        )}
+                        <label
+                            className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-100 transition-colors">
+                            Odaberi Video
+                            <input type="file" accept="video/*" className="hidden"
+                                   onChange={handleSingleFileChange('video')}/>
+                        </label>
+                        {files.video &&
+                            <p className="text-sm text-green-600 font-medium mt-3">Pripremljeno: {files.video.name}</p>}
+                    </div>
                 </section>
 
                 {/* Bottom Publish Action */}
