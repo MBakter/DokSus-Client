@@ -7,6 +7,9 @@ export interface Document {
     creationDate: string;
     publicationDate: string;
     content: DocumentContent;
+    pdfPath: string;
+    coverPath: string;
+    model3dPath: string;
     ownerProfile?: UserProfile;
 }
 

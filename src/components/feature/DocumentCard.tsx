@@ -3,9 +3,10 @@ import type {Document} from "../../types/Document.ts";
 interface DocumentCardProps {
     document: Document;
     showAuthorIcon: boolean;
+    onClick?: () => void;
 }
 
-export function DocumentCard({ document, showAuthorIcon }: DocumentCardProps) {
+export function DocumentCard({ document, showAuthorIcon, onClick }: DocumentCardProps) {
     // Generate initials from the fetched account profile, fallback to the content author
     const authorInitials = document.ownerProfile
         ? `${document.ownerProfile.name.charAt(0)}${document.ownerProfile.surname.charAt(0)}`.toUpperCase()
@@ -16,7 +17,9 @@ export function DocumentCard({ document, showAuthorIcon }: DocumentCardProps) {
         : document.content.author;
 
     return (
-        <div className="flex flex-col h-80 bg-white border border-slate-200 rounded-md shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+
+        <div onClick={onClick}
+             className="flex flex-col h-80 bg-white border border-slate-200 rounded-md shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
 
             {!document.isPublished && (
                 <span className="absolute top-3 left-3 bg-yellow-100 text-yellow-800 border border-yellow-300 text-[10px] px-2 py-1 uppercase tracking-wider font-bold rounded-sm z-10 shadow-sm">

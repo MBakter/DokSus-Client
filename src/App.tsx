@@ -20,6 +20,7 @@ export function App() {
                     <Route path="/racun" component={Account} />
                     <Route path="/profil/:email" component={PublicProfile} />
                     <Route path="/novo" component={DocumentEditor} />
+                    <Route path="/uredi/:id" component={DocumentEditor} />
                 </Router>
             </Layout>
         </AuthProvider>

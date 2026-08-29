@@ -3,6 +3,7 @@ import { AuthContext } from '../context/AuthContext';
 import { fetchMyDocuments } from '../api/feature/DocumentApi.ts';
 import type {Document} from '../types/Document';
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
+import {route} from "preact-router";
 
 export function Account() {
     const { user, logout } = useContext(AuthContext);
@@ -35,7 +36,12 @@ export function Account() {
     const renderDocumentGrid = (docs: Document[]) => (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-6xl">
             {docs.map((doc) => (
-                <DocumentCard key={doc.id} document={doc} showAuthorIcon={false} />
+                <DocumentCard
+                    key={doc.id}
+                    document={doc}
+                    showAuthorIcon={false}
+                    onClick={() => route(`/uredi/${doc.id}`)} // Routes to the editor
+                />
             ))}
             {docs.length === 0 && (
                 <p className="text-slate-500 italic py-4">Nema pronađenih dokumenata u ovoj kategoriji.</p>
@@ -49,10 +55,8 @@ export function Account() {
             {/* User Data Header */}
             <div className="w-full max-w-6xl bg-white border border-slate-200 rounded-md p-6 mb-10 flex justify-between items-start shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold text-blue-900 mb-4 tracking-tight">Moj Račun</h1>
+                    <h1 className="text-2xl font-bold text-blue-900 mb-4 tracking-tight">{user.name} {user.surname}</h1>
                     <div className="flex flex-col gap-2 text-sm text-slate-700">
-                        <p><span className="font-semibold text-slate-900 w-20 inline-block">Ime:</span> {user.name}</p>
-                        <p><span className="font-semibold text-slate-900 w-20 inline-block">Prezime:</span> {user.surname}</p>
                         <p><span className="font-semibold text-slate-900 w-20 inline-block">Email:</span> {user.email}</p>
                     </div>
                 </div>

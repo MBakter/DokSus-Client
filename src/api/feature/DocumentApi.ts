@@ -41,3 +41,30 @@ export const fetchMyDocuments = async (): Promise<Document[]> => {
     const response = await axiosClient.get<Document[]>('/documents/me');
     return await populateOwnerProfiles(response.data);
 };
+
+export const fetchDocumentById = async (id: string): Promise<Document> => {
+    const response = await axiosClient.get<Document>(`/documents/${id}`);
+    return response.data;
+};
+
+export const createDocument = async (payload: FormData) => {
+    const token = localStorage.getItem("jwt_token");
+    const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: payload
+    });
+    if (!response.ok) throw new Error("Failed to create document");
+    return response.json();
+};
+
+export const updateDocument = async (id: string, payload: FormData): Promise<Document> => {
+    const token = localStorage.getItem("jwt_token");
+    const response = await fetch(`/api/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: payload
+    });
+    if (!response.ok) throw new Error("Failed to update document");
+    return response.json();
+};
