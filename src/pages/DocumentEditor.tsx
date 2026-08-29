@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { DocumentContent } from "../types/Document.ts";
 import { createDocument, fetchDocumentById, updateDocument } from "../api/feature/DocumentApi.ts";
+import Lightbox from "yet-another-react-lightbox";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import "yet-another-react-lightbox/styles.css";
 
 const CATEGORIES = [
     "",
@@ -23,6 +26,7 @@ const INITIAL_DATA: DocumentContent = {
 interface NamedFile {
     file: File;
     name: string;
+    previewUrl: string;
 }
 
 interface ServerNamedFile {
@@ -39,10 +43,14 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(!!id);
 
+    // Gallery & Pagination State
+    const [lightboxIndex, setLightboxIndex] = useState(-1);
+    const [photoPage, setPhotoPage] = useState(0);
+    const ITEMS_PER_PAGE = 3;
+
     const [formData, setFormData] = useState<DocumentContent>(INITIAL_DATA);
     const [snapshot, setSnapshot] = useState<DocumentContent>(INITIAL_DATA);
 
-    // Expanded file state to handle arrays and the new video field
     const [files, setFiles] = useState<{
         cover: File | null;
         pdf: File | null;
@@ -50,14 +58,11 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         projectPhotos: NamedFile[];
         models3d: NamedFile[];
     }>({
-        cover: null,
-        pdf: null,
-        video: null,
-        projectPhotos: [],
-        models3d: []
+        cover: null, pdf: null, video: null, projectPhotos: [], models3d: []
     });
 
-    // Track paths of files already saved on the server to enable downloads
+    const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+
     const [serverPaths, setServerPaths] = useState<{
         cover: string;
         pdf: string;
@@ -65,12 +70,11 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         projectPhotos: ServerNamedFile[];
         models3d: ServerNamedFile[];
     }>({
-        cover: '',
-        pdf: '',
-        video: '',
-        projectPhotos: [],
-        models3d: []
+        cover: '', pdf: '', video: '', projectPhotos: [], models3d: []
     });
+
+    // Used strictly to detect if existing photo names were edited
+    const [originalServerPhotos, setOriginalServerPhotos] = useState<ServerNamedFile[]>([]);
 
     useEffect(() => {
         if (id) {
@@ -85,14 +89,18 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
             setFormData(document.content);
             setSnapshot(document.content);
 
-            // Safely map existing paths from the backend
+            const fetchedPhotos = (document as any).projectPhotos || [];
+
             setServerPaths({
                 cover: document.coverPath || '',
                 pdf: document.pdfPath || '',
                 video: (document as any).videoPath || '',
-                projectPhotos: (document as any).projectPhotos || [],
+                projectPhotos: fetchedPhotos,
                 models3d: (document as any).models3d || []
             });
+
+            // Store a deep copy to compare later for changes
+            setOriginalServerPhotos(JSON.parse(JSON.stringify(fetchedPhotos)));
         } catch (error) {
             console.error("Failed to load document", error);
         } finally {
@@ -105,28 +113,29 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         setFormData(prev => ({ ...prev, [target.name]: target.value }));
     };
 
-    // Handler for single files (cover, pdf, video)
     const handleSingleFileChange = (type: 'cover' | 'pdf' | 'video') => (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
             const selectedFile = target.files[0];
             setFiles(prev => ({ ...prev, [type]: selectedFile }));
+            if (type === 'cover') setCoverPreviewUrl(URL.createObjectURL(selectedFile));
         }
     };
 
-    // Handler for multiple files (photos, models)
     const handleMultipleFilesChange = (type: 'projectPhotos' | 'models3d') => (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
             const newFiles: NamedFile[] = Array.from(target.files).map(file => ({
                 file,
-                name: file.name.split('.')[0] // Default name is the filename without extension
+                name: file.name.split('.')[0],
+                previewUrl: URL.createObjectURL(file)
             }));
             setFiles(prev => ({ ...prev, [type]: [...prev[type], ...newFiles] }));
         }
-        target.value = ''; // Reset input so the same file can be selected again if removed
+        target.value = '';
     };
 
+    // Rename STAGED (newly uploaded) files
     const handleUpdateFileName = (type: 'projectPhotos' | 'models3d', index: number, newName: string) => {
         setFiles(prev => {
             const updated = [...prev[type]];
@@ -135,9 +144,19 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         });
     };
 
+    // Rename EXISTING (server) files
+    const handleUpdateServerPhotoName = (index: number, newName: string) => {
+        setServerPaths(prev => {
+            const updated = [...prev.projectPhotos];
+            updated[index].name = newName;
+            return { ...prev, projectPhotos: updated };
+        });
+    };
+
     const handleRemoveFile = (type: 'projectPhotos' | 'models3d', index: number) => {
         setFiles(prev => {
             const updated = [...prev[type]];
+            if (updated[index].previewUrl) URL.revokeObjectURL(updated[index].previewUrl);
             updated.splice(index, 1);
             return { ...prev, [type]: updated };
         });
@@ -146,27 +165,30 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     const isFormFilled = REQUIRED_METADATA_FIELDS.every(field => formData[field].trim() !== '');
     const isPublishable = isFormFilled && (files.pdf !== null || serverPaths.pdf !== '');
 
-    // Compare current form state with the snapshot to detect changes
+    // Track all forms of changes
     const hasTextChanges = JSON.stringify(formData) !== JSON.stringify(snapshot);
+    const hasServerPhotoChanges = JSON.stringify(serverPaths.projectPhotos) !== JSON.stringify(originalServerPhotos);
     const hasFileChanges = files.cover !== null || files.pdf !== null || files.video !== null ||
         files.projectPhotos.length > 0 || files.models3d.length > 0;
-    const hasChanges = hasTextChanges || hasFileChanges;
+
+    const hasChanges = hasTextChanges || hasFileChanges || hasServerPhotoChanges;
 
     const handleSave = async (publish: boolean) => {
         setIsSaving(true);
         try {
             const payload = new FormData();
-
-            // Append the JSON object as a Blob so Spring Boot can parse it
             payload.append("document", new Blob([JSON.stringify(formData)], { type: "application/json" }), "document.json");
             payload.append("isPublished", String(publish));
 
-            // Append files if they exist
+            // Send updated names of existing photos to the backend
+            if (hasServerPhotoChanges) {
+                payload.append("existingProjectPhotos", new Blob([JSON.stringify(serverPaths.projectPhotos)], { type: "application/json" }), "existingPhotos.json");
+            }
+
             if (files.cover) payload.append("cover", files.cover);
             if (files.pdf) payload.append("pdf", files.pdf);
             if (files.video) payload.append("video", files.video);
 
-            // Append multiple files and their corresponding names
             files.projectPhotos.forEach(item => {
                 payload.append("projectPhotos", item.file);
                 payload.append("projectPhotoNames", item.name);
@@ -187,9 +209,9 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
             if (publish) {
                 window.location.href = '/racun';
             } else {
-                // If saved as draft, reload to get updated server paths and reset local file state
                 if (documentId) loadExistingDocument(documentId);
                 setFiles({ cover: null, pdf: null, video: null, projectPhotos: [], models3d: [] });
+                setCoverPreviewUrl(null);
             }
         } catch (error) {
             console.error("Failed to save document:", error);
@@ -204,7 +226,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         </label>
     );
 
-    // Helper to generate the download URL (Update this base path to match your Spring Boot static resource config)
     const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
 
     if (isLoading) {
@@ -215,8 +236,26 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         );
     }
 
+    const lightboxSlides = serverPaths.projectPhotos.map(photo => ({
+        src: getDownloadUrl(photo.path),
+        alt: photo.name,
+    }));
+
+    // Pagination Logic
+    const totalPages = Math.ceil(serverPaths.projectPhotos.length / ITEMS_PER_PAGE);
+
     return (
         <div className="w-full flex flex-col items-center pb-16 bg-slate-50 min-h-screen">
+
+            {serverPaths.projectPhotos.length > 0 && (
+                <Lightbox
+                    open={lightboxIndex >= 0}
+                    close={() => setLightboxIndex(-1)}
+                    index={lightboxIndex}
+                    slides={lightboxSlides}
+                    plugins={[Zoom]}
+                />
+            )}
 
             {/* Top Action Bar */}
             <div className="w-full max-w-5xl flex items-center justify-between mt-8 mb-6">
@@ -224,44 +263,50 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                         {documentId ? 'Uređivanje dokumenta' : 'Novi dokument'}
                     </h1>
-                    <p className="text-sm text-slate-500 mt-1">Unos restauratorskog projekta u bazu</p>
                 </div>
-
                 <div className="flex items-center gap-4">
-                    <span className="text-xs text-slate-500 italic hidden sm:block">
-                        Spremanjem nacrta dokument ostaje privatan.
-                    </span>
                     <button
                         onClick={() => handleSave(false)}
                         disabled={isSaving || !hasChanges}
                         className="flex items-center gap-2 px-5 py-2 bg-blue-700 text-white font-medium rounded-md hover:bg-blue-800 transition-colors shadow-sm disabled:opacity-50 disabled:bg-slate-400 disabled:cursor-not-allowed"
                     >
-                        {isSaving ? 'Spremanje...' : 'Spremi nacrt'}
+                        {isSaving ? 'Spremanje...' : 'Spremi skicu'}
                     </button>
                 </div>
             </div>
 
             <div className="w-full max-w-5xl flex flex-col gap-6">
 
-                {/* NEW TOP SECTION: Cover Photo */}
+                {/* Naslovna fotografija */}
                 <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
                     <h2 className="text-lg font-bold text-blue-900 mb-4 border-b border-slate-100 pb-2">Naslovna fotografija</h2>
-                    <div className="border-2 border-dashed border-slate-300 rounded-md p-8 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors">
-                        <span className="text-4xl mb-3">📸</span>
-                        <p className="text-sm text-slate-600 mb-4">Ova fotografija će predstavljati projekt u glavnom pretraživaču.</p>
 
-                        {serverPaths.cover && !files.cover && (
-                            <div className="mb-4 flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-md border border-green-200">
-                                <span className="font-medium text-sm">Trenutna slika spremljena</span>
-                                <a href={getDownloadUrl(serverPaths.cover)} target="_blank" className="text-xs underline ml-2">Preuzmi</a>
+                    <div className="border-2 border-dashed border-slate-300 rounded-md p-8 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors">
+
+                        {/* If a new cover is staged, show its preview */}
+                        {coverPreviewUrl ? (
+                            <div className="mb-4 flex flex-col items-center">
+                                <img src={coverPreviewUrl} alt="Nova naslovna" className="w-48 h-48 object-cover rounded-md border border-slate-300 shadow-sm" />
+                                <span className="text-xs text-blue-600 mt-3 font-medium">Odabrano za prijenos: {files.cover?.name}</span>
                             </div>
+                        ) : serverPaths.cover ? (
+                            /* If no new cover is staged, show the existing server cover */
+                            <div className="mb-4 flex flex-col items-center">
+                                <img src={getDownloadUrl(serverPaths.cover)} alt="Trenutna naslovna" className="w-48 h-48 object-cover rounded-md border border-slate-300 shadow-sm" />
+                                <span className="text-xs text-slate-500 mt-3">Trenutna slika na poslužitelju</span>
+                            </div>
+                        ) : (
+                            /* Default placeholder if empty */
+                            <>
+                                <span className="text-4xl mb-3">📸</span>
+                                <p className="text-sm text-slate-600 mb-4">Ova fotografija će predstavljati projekt u glavnom pretraživaču.</p>
+                            </>
                         )}
 
-                        <label className="cursor-pointer bg-white border border-slate-300 text-slate-700 font-medium py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm">
+                        <label className="cursor-pointer bg-white border border-slate-300 text-slate-700 font-medium py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm mt-2">
                             {serverPaths.cover || files.cover ? 'Promijeni sliku' : 'Odaberi sliku'}
                             <input type="file" accept="image/*" className="hidden" onChange={handleSingleFileChange('cover')} />
                         </label>
-                        {files.cover && <span className="text-xs text-blue-600 mt-3 font-medium">Odabrano za prijenos: {files.cover.name}</span>}
                     </div>
                 </section>
 
@@ -275,30 +320,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                                 {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat || "— Odaberite kategoriju —"}</option>)}
                             </select>
                         </div>
-                        <div>
-                            {renderLabel("Broj OKIRU", "invNumber")}
-                            <input type="text" name="invNumber" value={formData.invNumber} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" />
-                        </div>
-                        <div>
-                            {renderLabel("Naslov / Naziv predmeta", "name")}
-                            <input type="text" name="name" value={formData.name} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" />
-                        </div>
-                        <div>
-                            {renderLabel("Autor", "author")}
-                            <input type="text" name="author" value={formData.author} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" />
-                        </div>
-                        <div>
-                            {renderLabel("Datacija", "date")}
-                            <input type="text" name="date" value={formData.date} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" />
-                        </div>
-                        <div>
-                            {renderLabel("Student", "student")}
-                            <input type="text" name="student" value={formData.student} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" />
-                        </div>
-                        <div>
-                            {renderLabel("Profesor / Mentor", "professor")}
-                            <input type="text" name="professor" value={formData.professor} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" />
-                        </div>
+                        <div>{renderLabel("Broj OKIRU", "invNumber")}<input type="text" name="invNumber" value={formData.invNumber} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
+                        <div>{renderLabel("Naslov / Naziv predmeta", "name")}<input type="text" name="name" value={formData.name} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
+                        <div>{renderLabel("Autor", "author")}<input type="text" name="author" value={formData.author} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
+                        <div>{renderLabel("Datacija", "date")}<input type="text" name="date" value={formData.date} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
+                        <div>{renderLabel("Student", "student")}<input type="text" name="student" value={formData.student} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
+                        <div>{renderLabel("Profesor / Mentor", "professor")}<input type="text" name="professor" value={formData.professor} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
                     </div>
                 </section>
 
@@ -306,7 +333,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
                     <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Tehnološki podaci</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* Material inputs shortened for brevity, keep the exact same fields you had before */}
                         <div>{renderLabel("Osnovni materijal", "material")}<input type="text" name="material" value={formData.material} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
                         <div>{renderLabel("Tehnika", "technique")}<input type="text" name="technique" value={formData.technique} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
                         <div>{renderLabel("Pigment", "pigment")}<input type="text" name="pigment" value={formData.pigment} onInput={handleInputChange} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2" /></div>
@@ -346,7 +372,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
                     <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Dokumentacija i Prilozi</h2>
 
-                    {/* Singular Files (PDF & Video) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         {/* PDF */}
                         <div className="border border-slate-200 rounded-md p-5 bg-slate-50">
@@ -375,39 +400,104 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                         </div>
                     </div>
 
-                    {/* Multiple Files: Project Photos */}
-                    <div className="mb-8">
-                        <h3 className="font-semibold text-slate-800 mb-3 border-b border-slate-200 pb-1">Fotografije projekta</h3>
+                    {/* Multiple Files: Project Photos (Animated Row Slider) */}
+                    <div className="mb-8 border-t border-slate-100 pt-6">
+                        <h3 className="font-semibold text-slate-800 mb-4">Fotografije projekta</h3>
 
-                        {/* List existing server photos */}
                         {serverPaths.projectPhotos.length > 0 && (
-                            <ul className="mb-4 space-y-2">
-                                {serverPaths.projectPhotos.map((photo, i) => (
-                                    <li key={i} className="text-sm flex items-center gap-2">
-                                        <span>✓ {photo.name}</span>
-                                        <a href={getDownloadUrl(photo.path)} target="_blank" className="text-blue-600 underline text-xs">Preuzmi</a>
-                                    </li>
-                                ))}
-                            </ul>
+                            <div className="flex flex-col mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
+
+                                {/* Sliding Container */}
+                                <div className="overflow-hidden w-full mb-6">
+                                    <div
+                                        className="flex transition-transform duration-500 ease-in-out"
+                                        style={{ transform: `translateX(-${photoPage * 100}%)` }}
+                                    >
+                                        {/* Render ALL photos, CSS transform handles the paging */}
+                                        {serverPaths.projectPhotos.map((photo, index) => (
+                                            <div key={index} className="w-full md:w-1/3 flex-shrink-0 px-2">
+                                                <div className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden h-full">
+                                                    {/* Image Thumbnail */}
+                                                    <div
+                                                        className="relative group cursor-pointer aspect-[4/3] bg-black overflow-hidden"
+                                                        onClick={() => setLightboxIndex(index)}
+                                                    >
+                                                        <img
+                                                            src={getDownloadUrl(photo.path)}
+                                                            alt="preview"
+                                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                        />
+                                                    </div>
+                                                    {/* Edit Name Area (Multi-line) */}
+                                                    <div className="p-2 border-t border-slate-200 flex-1 flex flex-col">
+                                    <textarea
+                                        value={photo.name}
+                                        onChange={(e) => handleUpdateServerPhotoName(index, (e.target as HTMLTextAreaElement).value)}
+                                        className="w-full text-sm font-medium text-slate-700 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1 flex-1"
+                                        rows={2}
+                                        placeholder="Unesite naziv"
+                                    />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Pagination Controls */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-6">
+                                        <button
+                                            onClick={() => setPhotoPage(p => Math.max(0, p - 1))}
+                                            disabled={photoPage === 0}
+                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
+                                        >
+                                            <span className="text-xl font-bold">←</span>
+                                        </button>
+
+                                        <div className="flex gap-2">
+                                            {Array.from({ length: totalPages }).map((_, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => setPhotoPage(idx)}
+                                                    className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-colors ${idx === photoPage ? 'bg-blue-600' : 'bg-slate-300 hover:bg-slate-400'}`}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <button
+                                            onClick={() => setPhotoPage(p => Math.min(totalPages - 1, p + 1))}
+                                            disabled={photoPage === totalPages - 1}
+                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
+                                        >
+                                            <span className="text-xl font-bold">→</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         )}
 
-                        {/* List new staged photos with name inputs */}
+                        {/* List for staging new photos with Multi-Line Textareas */}
                         {files.projectPhotos.map((item, index) => (
-                            <div key={index} className="flex items-center gap-3 mb-2 p-2 bg-blue-50 border border-blue-100 rounded">
-                                <span className="text-xs text-slate-500 w-24 truncate">{item.file.name}</span>
-                                <input
-                                    type="text"
-                                    value={item.name}
-                                    placeholder="Unesite naziv fotografije"
-                                    onChange={(e) => handleUpdateFileName('projectPhotos', index, (e.target as HTMLInputElement).value)}
-                                    className="flex-1 text-sm px-2 py-1 border border-slate-300 rounded"
-                                />
-                                <button onClick={() => handleRemoveFile('projectPhotos', index)} className="text-red-500 text-sm px-2">Ukloni</button>
+                            <div key={index} className="flex gap-4 mb-4 p-4 bg-blue-50 border border-blue-100 rounded-md">
+                                <img src={item.previewUrl} alt="preview" className="w-24 h-24 object-cover rounded border border-slate-300 shadow-sm" />
+                                <div className="flex-1 flex flex-col justify-between">
+                <textarea
+                    value={item.name}
+                    placeholder="Unesite opisni naziv fotografije (u više linija)"
+                    onChange={(e) => handleUpdateFileName('projectPhotos', index, (e.target as HTMLTextAreaElement).value)}
+                    className="w-full text-sm px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 resize-none h-16"
+                />
+                                    <div className="flex justify-between items-end mt-1">
+                                        <span className="text-xs text-slate-500 truncate max-w-[200px]">{item.file.name}</span>
+                                        <button onClick={() => handleRemoveFile('projectPhotos', index)} className="text-red-500 hover:bg-red-100 text-sm px-3 py-1 rounded transition-colors font-medium">Ukloni</button>
+                                    </div>
+                                </div>
                             </div>
                         ))}
 
-                        <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-600 text-xs py-1.5 px-3 rounded hover:bg-slate-100 mt-2">
-                            + Dodaj fotografije
+                        <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
+                            + Dodaj nove fotografije
                             <input type="file" accept="image/*" multiple className="hidden" onChange={handleMultipleFilesChange('projectPhotos')} />
                         </label>
                     </div>
