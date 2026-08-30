@@ -6,7 +6,7 @@ import {Login} from "./pages/Login.tsx";
 import {Register} from "./pages/Register.tsx";
 import {Account} from "./pages/Account.tsx";
 import {PublicProfile} from "./pages/PublicProfile.tsx";
-import {DocumentEditor} from "./pages/DocumentEditor.tsx";
+import {DocumentEditor} from "./pages/document_editor/DocumentEditor.tsx";
 
 
 export function App() {
