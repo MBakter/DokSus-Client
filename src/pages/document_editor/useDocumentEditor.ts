@@ -20,7 +20,6 @@ export const CATEGORIES = [
     "ISTRAŽIVAČKI RADOVI I REFERENTNI MATERIJALI", "DIPLOMSKI I SEMINARSKI RADOVI"
 ];
 
-
 export const REQUIRED_METADATA_FIELDS: Array<keyof DocumentContent> = [
     'category', 'invNumber', 'name', 'author', 'date', 'student', 'professor'
 ];
@@ -65,12 +64,16 @@ export function useDocumentEditor(id?: string) {
         cover: '', pdf: '', video: null, projectPhotos: [], models3d: []
     });
 
-    // Consolidated tracker for detecting changes to existing server files
+    // Tracks initial state so we know if something was deleted
     const [initialServerState, setInitialServerState] = useState<{
+        cover: string;
+        pdf: string;
         photos: ServerNamedFile[];
         models: ServerNamedFile[];
         video: ServerNamedFile | null;
-    }>({ photos: [], models: [], video: null });
+    }>({
+        cover: '', pdf: '', photos: [], models: [], video: null
+    });
 
     // --- Data Fetching ---
     useEffect(() => {
@@ -98,8 +101,9 @@ export function useDocumentEditor(id?: string) {
                 models3d: fetchedModels
             });
 
-            // Keep a deep copy to compare against later
             setInitialServerState({
+                cover: document.coverPath || '',
+                pdf: document.pdfPath || '',
                 photos: JSON.parse(JSON.stringify(fetchedPhotos)),
                 models: JSON.parse(JSON.stringify(fetchedModels)),
                 video: fetchedVideo ? JSON.parse(JSON.stringify(fetchedVideo)) : null
@@ -182,7 +186,16 @@ export function useDocumentEditor(id?: string) {
         }
     };
 
-    // --- Remove Handlers ---
+    // --- Remove handlers ---
+    const handleRemoveCover = () => {
+        setFiles(prev => ({ ...prev, cover: null }));
+        setCoverPreviewUrl(null);
+        setServerPaths(prev => ({ ...prev, cover: '' }));
+    };
+    const handleRemovePdf = () => {
+        setFiles(prev => ({ ...prev, pdf: null }));
+        setServerPaths(prev => ({ ...prev, pdf: '' }));
+    };
     const handleRemoveFile = (type: 'projectPhotos' | 'models3d', index: number) => {
         setFiles(prev => {
             const updated = [...prev[type]];
@@ -191,7 +204,13 @@ export function useDocumentEditor(id?: string) {
             return { ...prev, [type]: updated };
         });
     };
-
+    const handleRemoveServerPhoto = (index: number) => {
+        setServerPaths(prev => {
+            const updated = [...prev.projectPhotos];
+            updated.splice(index, 1);
+            return { ...prev, projectPhotos: updated };
+        });
+    };
     const handleRemoveServerModel = (index: number) => {
         setServerPaths(prev => {
             const updated = [...prev.models3d];
@@ -217,12 +236,12 @@ export function useDocumentEditor(id?: string) {
     const hasServerPhotoChanges = JSON.stringify(serverPaths.projectPhotos) !== JSON.stringify(initialServerState.photos);
     const hasServerModelChanges = JSON.stringify(serverPaths.models3d) !== JSON.stringify(initialServerState.models);
     const hasServerVideoChanges = JSON.stringify(serverPaths.video) !== JSON.stringify(initialServerState.video);
+    const hasServerCoverChanges = serverPaths.cover !== initialServerState.cover;
+    const hasServerPdfChanges = serverPaths.pdf !== initialServerState.pdf;
+
     const hasFileChanges = files.cover !== null || files.pdf !== null || files.video !== null || files.projectPhotos.length > 0 || files.models3d.length > 0;
+    const hasChanges = hasTextChanges || hasFileChanges || hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerCoverChanges || hasServerPdfChanges;
 
-    // Trigger save button activation if anything was edited, deleted, or added
-    const hasChanges = hasTextChanges || hasFileChanges || hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges;
-
-    // --- Save Logic ---
     const handleSave = async (publish: boolean) => {
         setIsSaving(true);
         try {
@@ -238,14 +257,12 @@ export function useDocumentEditor(id?: string) {
                 payload.append("existingModels3d", new Blob([JSON.stringify(serverPaths.models3d)], { type: "application/json" }), "existingModels3d.json");
             }
 
-            // Video specific logic
-            if (serverPaths.video) {
-                if (hasServerVideoChanges) {
-                    payload.append("existingVideo", new Blob([JSON.stringify(serverPaths.video)], { type: "application/json" }), "existingVideo.json");
-                }
-            } else if (initialServerState.video) {
-                // If it existed initially but is now null, tell server to remove it
-                payload.append("removeServerVideo", "true");
+            // Flags for deleting single files
+            if (!serverPaths.cover && initialServerState.cover) payload.append("removeServerCover", "true");
+            if (!serverPaths.pdf && initialServerState.pdf) payload.append("removeServerPdf", "true");
+            if (!serverPaths.video && initialServerState.video) payload.append("removeServerVideo", "true");
+            else if (serverPaths.video && hasServerVideoChanges) {
+                payload.append("existingVideo", new Blob([JSON.stringify(serverPaths.video)], { type: "application/json" }), "existingVideo.json");
             }
 
             // Append new physical files
@@ -274,9 +291,8 @@ export function useDocumentEditor(id?: string) {
                 setDocumentId(newDoc.id);
             }
 
-            if (publish) {
-                window.location.href = '/racun';
-            } else {
+            if (publish) window.location.href = '/racun';
+            else {
                 if (documentId) loadExistingDocument(documentId);
                 // Reset local staging
                 setFiles({ cover: null, pdf: null, video: null, projectPhotos: [], models3d: [] });
@@ -290,32 +306,11 @@ export function useDocumentEditor(id?: string) {
     };
 
     return {
-        // State variables
-        documentId,
-        isSaving,
-        isLoading,
-        formData,
-        files,
-        serverPaths,
-        coverPreviewUrl,
-
-        // Computed boolean flags
-        isPublishable,
-        hasChanges,
-
-        // Form & File Action Handlers
-        handleInputChange,
-        handleSingleFileChange,
-        handleMultipleFilesChange,
-        handleUpdateFileName,
-        handleUpdateServerPhotoName,
-        handleUpdateServerModelName,
-        handleUpdateVideoName,
-        handleRemoveFile,
-        handleRemoveServerModel,
-        handleRemoveVideo,
-
-        // Primary Save Action
+        documentId, isSaving, isLoading, formData, files, serverPaths, coverPreviewUrl,
+        isPublishable, hasChanges,
+        handleInputChange, handleSingleFileChange, handleMultipleFilesChange,
+        handleUpdateFileName, handleUpdateServerPhotoName, handleUpdateServerModelName, handleUpdateVideoName,
+        handleRemoveFile, handleRemoveServerModel, handleRemoveVideo, handleRemoveCover, handleRemovePdf, handleRemoveServerPhoto,
         handleSave,
     };
 }

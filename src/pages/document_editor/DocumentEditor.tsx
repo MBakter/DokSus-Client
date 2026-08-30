@@ -16,6 +16,7 @@ declare global {
 interface DocumentEditorProps {
     id?: string;
 }
+const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
 
 export function DocumentEditor({ id }: DocumentEditorProps) {
     const editor = useDocumentEditor(id);
@@ -43,6 +44,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     serverCover={editor.serverPaths.cover}
                     coverPreviewUrl={editor.coverPreviewUrl}
                     onChange={editor.handleSingleFileChange('cover')}
+                    onRemove={editor.handleRemoveCover}
                 />
 
                 <BasicDataSection formData={editor.formData} onChange={editor.handleInputChange} />
@@ -54,6 +56,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     pdfFile={editor.files.pdf}
                     serverPdf={editor.serverPaths.pdf}
                     onChange={editor.handleSingleFileChange('pdf')}
+                    onRemove={editor.handleRemovePdf}
                 />
 
                 <PhotosSection
@@ -63,6 +66,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     onUpdateFileName={editor.handleUpdateFileName}
                     onUpdateServerPhotoName={editor.handleUpdateServerPhotoName}
                     onRemoveFile={editor.handleRemoveFile}
+                    onRemoveServerPhoto={editor.handleRemoveServerPhoto}
                 />
 
                 <Models3DSection
@@ -135,8 +139,7 @@ export function PublishAction({ isPublishable, isSaving, onPublish }: any) {
     );
 }
 
-export function CoverPhotoSection({ coverFile, serverCover, coverPreviewUrl, onChange }: any) {
-    const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
+export function CoverPhotoSection({ coverFile, serverCover, coverPreviewUrl, onChange, onRemove }: any) {
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
             <h2 className="text-lg font-bold text-blue-900 mb-4 border-b border-slate-100 pb-2">Naslovna fotografija</h2>
@@ -159,10 +162,18 @@ export function CoverPhotoSection({ coverFile, serverCover, coverPreviewUrl, onC
                     </>
                 )}
 
-                <label className="cursor-pointer bg-white border border-slate-300 text-slate-700 font-medium py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm mt-2">
-                    {serverCover || coverFile ? 'Promijeni sliku' : 'Odaberi sliku'}
-                    <input type="file" accept="image/*" className="hidden" onChange={onChange} />
-                </label>
+                <div className="flex gap-3 mt-2">
+                    <label className="cursor-pointer bg-white border border-slate-300 text-slate-700 font-medium py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm">
+                        {serverCover || coverFile ? 'Promijeni sliku' : 'Odaberi sliku'}
+                        <input type="file" accept="image/*" className="hidden" onChange={onChange} />
+                    </label>
+
+                    {(serverCover || coverFile) && (
+                        <button onClick={onRemove} className="text-red-600 hover:bg-red-50 border border-slate-300 hover:border-red-200 font-medium py-2 px-6 rounded-md transition-colors shadow-sm">
+                            Ukloni
+                        </button>
+                    )}
+                </div>
             </div>
         </section>
     );
@@ -247,8 +258,7 @@ export function StorageSection({ formData, onChange }: any) {
     );
 }
 
-export function PdfSection({ pdfFile, serverPdf, onChange }: any) {
-    const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
+export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
             <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Glavni Dokument (PDF) <span className="text-red-500">*</span></h2>
@@ -259,10 +269,20 @@ export function PdfSection({ pdfFile, serverPdf, onChange }: any) {
                         📄 Preuzmi trenutni PDF
                     </a>
                 )}
-                <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-100 transition-colors">
-                    Odaberi PDF
-                    <input type="file" accept=".pdf" className="hidden" onChange={onChange} />
-                </label>
+
+                <div className="flex items-center gap-4 mt-2">
+                    <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-100 transition-colors shadow-sm">
+                        Odaberi PDF
+                        <input type="file" accept=".pdf" className="hidden" onChange={onChange} />
+                    </label>
+
+                    {(serverPdf || pdfFile) && (
+                        <button onClick={onRemove} className="text-red-600 hover:bg-red-50 border border-slate-300 hover:border-red-200 font-medium text-sm py-2 px-4 rounded transition-colors shadow-sm">
+                            Ukloni PDF
+                        </button>
+                    )}
+                </div>
+
                 {pdfFile && (
                     <p className="text-sm text-green-600 font-medium mt-3">Pripremljeno: {pdfFile.name}</p>
                 )}
@@ -271,8 +291,7 @@ export function PdfSection({ pdfFile, serverPdf, onChange }: any) {
     );
 }
 
-export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpdateFileName, onUpdateServerPhotoName, onRemoveFile }: any) {
-    const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
+export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpdateFileName, onUpdateServerPhotoName, onRemoveFile, onRemoveServerPhoto }: any) {
     const ITEMS_PER_PAGE = 3;
 
     const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -280,8 +299,7 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
 
     const totalPages = Math.ceil(serverPaths.projectPhotos.length / ITEMS_PER_PAGE);
     const lightboxSlides = serverPaths.projectPhotos.map((photo: any) => ({
-        src: getDownloadUrl(photo.path),
-        alt: photo.name,
+        src: getDownloadUrl(photo.path), alt: photo.name,
     }));
 
     return (
@@ -304,9 +322,16 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
                                             <textarea
                                                 value={photo.name}
                                                 onChange={(e) => onUpdateServerPhotoName(index, (e.target as HTMLTextAreaElement).value)}
-                                                className="w-full text-sm font-medium text-slate-700 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1 flex-1"
+                                                className="w-full text-sm font-medium text-slate-700 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1 flex-1 mb-2"
                                                 rows={2} placeholder="Unesite naziv"
                                             />
+                                            {/* ADDED MISSING REMOVE BUTTON HERE */}
+                                            <button
+                                                onClick={() => onRemoveServerPhoto(index)}
+                                                className="text-red-500 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-xs px-2 py-1 rounded transition-colors font-medium self-end"
+                                            >
+                                                Ukloni
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -372,6 +397,8 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
     useEffect(() => {
         if (modelPage >= totalModels && totalModels > 0) {
             setModelPage(totalModels - 1);
+        } else if (totalModels === 0) {
+            setModelPage(0);
         }
     }, [totalModels, modelPage]);
 
@@ -449,9 +476,8 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
                                     </div>
 
                                     <button
-                                        type={"button"}
-                                        onClick={(e) => {
-                                            e.preventDefault();
+                                        type="button"
+                                        onClick={() => {
                                             if (currentModel.isServer) {
                                                 onRemoveServerModel(currentModel.index);
                                             } else {
@@ -470,11 +496,10 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
                     {/* Pagination Controls */}
                     {totalModels > 1 && (
                         <div className="flex items-center justify-center gap-6 mt-2">
-                            <button
-                                onClick={() => setModelPage(p => Math.max(0, p - 1))}
-                                disabled={modelPage === 0}
-                                className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
-                            >
+                            <button type="button"
+                                    onClick={() => setModelPage(p => Math.max(0, p - 1))}
+                                    disabled={modelPage === 0}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors">
                                 <span className="text-xl font-bold">←</span>
                             </button>
 
@@ -487,12 +512,10 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
                                     />
                                 ))}
                             </div>
-
-                            <button
-                                onClick={() => setModelPage(p => Math.min(totalModels - 1, p + 1))}
-                                disabled={modelPage === totalModels - 1}
-                                className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors"
-                            >
+                            <button type="button"
+                                    onClick={() => setModelPage(p => Math.min(totalModels - 1, p + 1))}
+                                    disabled={modelPage === totalModels - 1}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors">
                                 <span className="text-xl font-bold">→</span>
                             </button>
                         </div>
@@ -500,8 +523,7 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
                 </div>
             )}
 
-            <label
-                className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
+            <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
                 + Dodaj nove modele
                 <input type="file" accept=".obj,.gltf,.glb" multiple className="hidden"
                        onChange={onMultipleFilesChange}/>
@@ -509,10 +531,7 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
         </section>
     );
 }
-
 export function VideoSection({ videoFile, serverVideo, onChange, onUpdateVideoName, onRemoveVideo }: any) {
-    const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
-
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
             <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Videozapis</h2>
