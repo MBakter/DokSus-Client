@@ -64,7 +64,7 @@ export function DocumentEditor({id}: DocumentEditorProps) {
     const [files, setFiles] = useState<{
         cover: File | null;
         pdf: File | null;
-        video: File | null;
+        video: NamedFile | null;
         projectPhotos: NamedFile[];
         models3d: NamedFile[];
     }>({
@@ -72,15 +72,16 @@ export function DocumentEditor({id}: DocumentEditorProps) {
     });
 
     const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+    const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
 
     const [serverPaths, setServerPaths] = useState<{
         cover: string;
         pdf: string;
-        video: string;
+        video: ServerNamedFile | null;
         projectPhotos: ServerNamedFile[];
         models3d: ServerNamedFile[];
     }>({
-        cover: '', pdf: '', video: '', projectPhotos: [], models3d: []
+        cover: '', pdf: '', video: null, projectPhotos: [], models3d: []
     });
 
     // Used strictly to detect if existing photo names were edited
@@ -88,6 +89,8 @@ export function DocumentEditor({id}: DocumentEditorProps) {
 
     // 3D Model Pagination State
     const [modelPage, setModelPage] = useState(0);
+
+    const [originalServerVideo, setOriginalServerVideo] = useState<ServerNamedFile | null>(null);
 
     // Helper: Rename existing server 3D models
     const handleUpdateServerModelName = (index: number, newName: string) => {
@@ -136,17 +139,19 @@ export function DocumentEditor({id}: DocumentEditorProps) {
             setSnapshot(document.content);
 
             const fetchedPhotos = (document as any).projectPhotos || [];
+            const fetchedVideo = (document as any).video || null;
 
             setServerPaths({
                 cover: document.coverPath || '',
                 pdf: document.pdfPath || '',
-                video: (document as any).videoPath || '',
+                video: fetchedVideo,
                 projectPhotos: fetchedPhotos,
                 models3d: (document as any).models3d || []
             });
 
             // Store a deep copy to compare later for changes
             setOriginalServerPhotos(JSON.parse(JSON.stringify(fetchedPhotos)));
+            setOriginalServerVideo(fetchedVideo ? JSON.parse(JSON.stringify(fetchedVideo)) : null);
         } catch (error) {
             console.error("Failed to load document", error);
         } finally {
@@ -165,6 +170,7 @@ export function DocumentEditor({id}: DocumentEditorProps) {
             const selectedFile = target.files[0];
             setFiles(prev => ({...prev, [type]: selectedFile}));
             if (type === 'cover') setCoverPreviewUrl(URL.createObjectURL(selectedFile));
+            if (type === 'video') setVideoPreviewUrl(URL.createObjectURL(selectedFile));
         }
     };
 
@@ -216,8 +222,9 @@ export function DocumentEditor({id}: DocumentEditorProps) {
     const hasServerPhotoChanges = JSON.stringify(serverPaths.projectPhotos) !== JSON.stringify(originalServerPhotos);
     const hasFileChanges = files.cover !== null || files.pdf !== null || files.video !== null ||
         files.projectPhotos.length > 0 || files.models3d.length > 0;
+    const hasServerVideoChanges = JSON.stringify(serverPaths.video) !== JSON.stringify(originalServerVideo);
 
-    const hasChanges = hasTextChanges || hasFileChanges || hasServerPhotoChanges;
+    const hasChanges = hasTextChanges || hasFileChanges || hasServerPhotoChanges || hasServerVideoChanges;
 
     const handleSave = async (publish: boolean) => {
         setIsSaving(true);
@@ -233,7 +240,6 @@ export function DocumentEditor({id}: DocumentEditorProps) {
 
             if (files.cover) payload.append("cover", files.cover);
             if (files.pdf) payload.append("pdf", files.pdf);
-            if (files.video) payload.append("video", files.video);
 
             files.projectPhotos.forEach(item => {
                 payload.append("projectPhotos", item.file);
@@ -244,6 +250,19 @@ export function DocumentEditor({id}: DocumentEditorProps) {
                 payload.append("models3d", item.file);
                 payload.append("models3dNames", item.name);
             });
+
+            if (serverPaths.video) {
+                if (hasServerVideoChanges) {
+                    payload.append("existingVideo", new Blob([JSON.stringify(serverPaths.video)], {type: "application/json"}), "existingVideo.json");
+                }
+            } else if (originalServerVideo) {
+                payload.append("removeServerVideo", "true");
+            }
+
+            if (files.video) {
+                payload.append("video", files.video.file);
+                payload.append("videoName", files.video.name);
+            }
 
             if (documentId) {
                 await updateDocument(documentId, payload);
@@ -258,6 +277,7 @@ export function DocumentEditor({id}: DocumentEditorProps) {
                 if (documentId) loadExistingDocument(documentId);
                 setFiles({cover: null, pdf: null, video: null, projectPhotos: [], models3d: []});
                 setCoverPreviewUrl(null);
+                setVideoPreviewUrl(null);
             }
         } catch (error) {
             console.error("Failed to save document:", error);
@@ -512,7 +532,8 @@ export function DocumentEditor({id}: DocumentEditorProps) {
 
                 {/* Section 5: PDF */}
                 <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
-                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Glavni Dokument (PDF) <span className="text-red-500">*</span></h2>
+                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Glavni Dokument
+                        (PDF) <span className="text-red-500">*</span></h2>
                     <div className="border border-slate-200 rounded-md p-6 bg-slate-50">
                         {serverPaths.pdf && !files.pdf && (
                             <a href={getDownloadUrl(serverPaths.pdf)} target="_blank"
@@ -530,9 +551,10 @@ export function DocumentEditor({id}: DocumentEditorProps) {
                     </div>
                 </section>
 
-                {/* Section 6: Fotografije projekta */}
+                {/* Section 6: Project photos */}
                 <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
-                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Fotografije projekta</h2>
+                    <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Fotografije
+                        projekta</h2>
 
                     {serverPaths.projectPhotos.length > 0 && (
                         <div className="flex flex-col mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -640,7 +662,7 @@ export function DocumentEditor({id}: DocumentEditorProps) {
                     </label>
                 </section>
 
-                {/* Section 7: 3D Modeli */}
+                {/* Section 7: 3D Models */}
                 <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
                     <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">3D Modeli</h2>
 
@@ -769,24 +791,92 @@ export function DocumentEditor({id}: DocumentEditorProps) {
                     </label>
                 </section>
 
-                {/* Section 8: Videozapis */}
+                {/* Section 8: Video */}
                 <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
                     <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Videozapis</h2>
-                    <div className="border border-slate-200 rounded-md p-6 bg-slate-50">
-                        {serverPaths.video && !files.video && (
-                            <a href={getDownloadUrl(serverPaths.video)} target="_blank"
-                               className="text-sm text-blue-700 font-medium underline block mb-3">🎥 Preuzmi trenutni
-                                Video</a>
-                        )}
-                        <label
-                            className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-100 transition-colors">
-                            Odaberi Video
-                            <input type="file" accept="video/*" className="hidden"
-                                   onChange={handleSingleFileChange('video')}/>
-                        </label>
-                        {files.video &&
-                            <p className="text-sm text-green-600 font-medium mt-3">Pripremljeno: {files.video.name}</p>}
-                    </div>
+
+                    {(serverPaths.video || files.video) ? (
+                        <div className="flex flex-col mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden mb-4">
+
+                                {/* Video Player */}
+                                <div className="w-full bg-slate-200 relative flex items-center justify-center overflow-hidden">
+                                    <video
+                                        src={serverPaths.video ? getDownloadUrl(serverPaths.video.path) : files.video!.previewUrl}
+                                        controls
+                                        className="w-full h-auto max-h-[450px] bg-black"
+                                    >
+                                        Vaš preglednik ne podržava video element.
+                                    </video>
+                                </div>
+
+                                {/* Editor Controls (Matches 3D Model style) */}
+                                <div className="p-4 flex flex-col gap-3">
+                    <textarea
+                        value={serverPaths.video ? serverPaths.video.name : files.video!.name}
+                        onChange={(e) => {
+                            const newName = (e.target as HTMLTextAreaElement).value;
+                            if (serverPaths.video) {
+                                setServerPaths(prev => ({ ...prev, video: { ...prev.video!, name: newName } }));
+                            } else {
+                                setFiles(prev => ({ ...prev, video: { ...prev.video!, name: newName } }));
+                            }
+                        }}
+                        className="w-full text-sm font-medium text-slate-700 bg-slate-50 border border-slate-300 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-3"
+                        rows={2}
+                        placeholder="Unesite naziv videozapisa"
+                    />
+
+                                    <div className="flex justify-between items-center mt-2">
+                                        <div className="flex gap-4">
+                                            {serverPaths.video ? (
+                                                <a href={getDownloadUrl(serverPaths.video.path)} target="_blank"
+                                                   className="text-blue-700 hover:underline font-bold text-sm flex items-center gap-1">
+                                                    <span>↓</span> Preuzmi datoteku
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs font-medium text-slate-500">Nova datoteka spremna za prijenos: {files.video!.file.name}</span>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                if (serverPaths.video) {
+                                                    setServerPaths(prev => ({ ...prev, video: null }));
+                                                } else {
+                                                    if (files.video?.previewUrl) URL.revokeObjectURL(files.video.previewUrl);
+                                                    setFiles(prev => ({ ...prev, video: null }));
+                                                }
+                                            }}
+                                            className="text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 font-bold px-4 py-1.5 rounded text-sm transition-all"
+                                        >
+                                            Ukloni video
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-2 border-dashed border-slate-300 rounded-md p-8 bg-slate-50 flex flex-col items-center justify-center transition-colors hover:bg-slate-100">
+                            <span className="text-4xl mb-3 block">🎥</span>
+                            <p className="text-sm text-slate-600 mb-4">Ovdje možete priložiti videozapis o projektu.</p>
+                            <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm">
+                                Odaberi video
+                                <input type="file" accept="video/*" className="hidden"
+                                       onChange={(e) => {
+                                           const target = e.target as HTMLInputElement;
+                                           if (target.files && target.files.length > 0) {
+                                               const file = target.files[0];
+                                               setFiles(prev => ({
+                                                   ...prev,
+                                                   video: { file, name: file.name.split('.')[0], previewUrl: URL.createObjectURL(file) }
+                                               }));
+                                           }
+                                           target.value = '';
+                                       }}/>
+                            </label>
+                        </div>
+                    )}
                 </section>
 
                 {/* Bottom Publish Action */}
