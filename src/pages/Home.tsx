@@ -127,7 +127,12 @@ export function Home({ url }: HomeProps) {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-6xl">
                     {documents.map((doc) => (
-                        <DocumentCard key={doc.id} document={doc} showAuthorIcon={true} />
+                        <DocumentCard
+                            key={doc.id}
+                            document={doc}
+                            showAuthorIcon={true}
+                            onClick={() => route(`/dokument/${doc.id}`)}
+                        />
                     ))}
                     {documents.length === 0 && (
                         <p className="col-span-full text-center text-slate-500 italic py-4">Nema pronađenih dokumenata.</p>

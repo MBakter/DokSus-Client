@@ -4,6 +4,7 @@ import type {UserProfile} from "../types/UserProfile.ts";
 import {fetchSingleUserProfile} from "../api/feature/UserProfileApi.ts";
 import {fetchUserPublishedDocuments} from "../api/feature/DocumentApi.ts";
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
+import {route} from "preact-router";
 
 interface PublicProfileProps {
     email?: string; // Automatically injected by preact-router from the URL
@@ -73,7 +74,12 @@ export function PublicProfile({ email }: PublicProfileProps) {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {documents.map((doc) => (
-                            <DocumentCard key={doc.id} document={doc} showAuthorIcon={false} />
+                            <DocumentCard
+                                key={doc.id}
+                                document={doc}
+                                showAuthorIcon={false}
+                                onClick={() => route(`/dokument/${doc.id}`)}
+                            />
                         ))}
                         {documents.length === 0 && (
                             <p className="col-span-full text-slate-500 italic py-4">

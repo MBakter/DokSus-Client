@@ -3,7 +3,10 @@ import {useEffect, useState} from "preact/hooks";
 import Lightbox from "yet-another-react-lightbox";
 import {Zoom} from "yet-another-react-lightbox/plugins";
 import type {DocumentContent} from "../../types/Document.ts";
+import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
+import {getDownloadUrl} from "../../util/Utilities.ts";
+import {IconCamera, IconCheck, IconDownload, IconPDF, IconVideo} from "../../assets/Icons.tsx";
 
 declare global {
     namespace JSX {
@@ -16,7 +19,6 @@ declare global {
 interface DocumentEditorProps {
     id?: string;
 }
-const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
 
 export function DocumentEditor({ id }: DocumentEditorProps) {
     const editor = useDocumentEditor(id);
@@ -31,14 +33,18 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
 
     return (
         <div className="w-full flex flex-col items-center pb-16 bg-slate-50 min-h-screen relative">
+
             <TopActionBar
                 documentId={editor.documentId}
                 isSaving={editor.isSaving}
                 hasChanges={editor.hasChanges}
+                isPublishable={editor.isPublishable}
+                isPublished={editor.isPublished}
                 onSave={() => editor.handleSave(false)}
+                onPublish={() => editor.handleSave(true)}
             />
 
-            <div className="w-full max-w-5xl flex flex-col gap-6 px-4 lg:px-0">
+            <div className="w-full max-w-5xl flex flex-col gap-6 px-4 lg:px-0 mt-2">
                 <CoverPhotoSection
                     coverFile={editor.files.cover}
                     serverCover={editor.serverPaths.cover}
@@ -86,35 +92,83 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     onUpdateVideoName={editor.handleUpdateVideoName}
                     onRemoveVideo={editor.handleRemoveVideo}
                 />
-
-                <PublishAction
-                    isPublishable={editor.isPublishable}
-                    isSaving={editor.isSaving}
-                    onPublish={() => editor.handleSave(true)}
-                />
             </div>
         </div>
     );
 }
 
-export function TopActionBar({ documentId, isSaving, hasChanges, onSave }: any) {
+export function TopActionBar({ documentId, isSaving, hasChanges, onSave, isPublishable, onPublish, isPublished }: any) {
+    const [actionText, setActionText] = useState("");
+
+    // Clear the loading text when saving finishes
+    useEffect(() => {
+        if (!isSaving) setActionText("");
+    }, [isSaving]);
+
+    const handleDraftClick = () => {
+        setActionText(isPublished ? "Vraćanje u skicu..." : "Spremanje skice...");
+        onSave();
+    };
+
+    const handlePublishClick = () => {
+        setActionText(isPublished ? "Spremanje promjena..." : "Objavljivanje...");
+        onPublish();
+    };
+
     return (
-        <div className="sticky top-0 z-50 w-full bg-white/75 backdrop-blur-md border-b border-slate-200 py-4 shadow-sm mb-6 flex justify-center">
+        <div className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-200 py-3 shadow-sm mb-6 flex justify-center">
             <div className="w-full max-w-5xl flex items-center justify-between px-4 lg:px-0">
-                <div>
-                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+
+                {/* Title & Status Badge */}
+                <div className="flex items-center gap-4">
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                         {documentId ? 'Uređivanje dokumenta' : 'Novi dokument'}
                     </h1>
+                    {isPublished && (
+                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded uppercase tracking-wider border border-emerald-300 shadow-sm">
+                            Objavljeno
+                        </span>
+                    )}
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={onSave}
-                        disabled={isSaving || !hasChanges}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors shadow-sm disabled:opacity-50 disabled:bg-slate-400 disabled:cursor-not-allowed"
-                    >
-                        {isSaving ? 'Spremanje...' : 'Spremi skicu'}
-                    </button>
+
+                {/* Actions */}
+                <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-3">
+
+                        {/* Dynamic Loading Text */}
+                        {actionText && (
+                            <span className="text-sm font-bold text-blue-700 animate-pulse mr-3">
+                                {actionText}
+                            </span>
+                        )}
+
+                        <button
+                            onClick={handleDraftClick}
+                            // If published, they can always unpublish. If draft, they need changes to save.
+                            disabled={isSaving || (!isPublished && !hasChanges)}
+                            className="px-5 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isPublished ? 'Vrati u skicu' : 'Spremi skicu'}
+                        </button>
+
+                        <button
+                            onClick={handlePublishClick}
+                            // If published, disabled if no changes. If draft, disabled if not publishable.
+                            disabled={isSaving || (isPublished ? !hasChanges : !isPublishable)}
+                            className="px-6 py-2 bg-blue-900 text-white font-bold tracking-wide rounded hover:bg-blue-800 disabled:opacity-50 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            {isPublished ? 'Spremi promjene' : 'Objavi dokument'}
+                        </button>
+                    </div>
+
+                    {/* Helper text only shows if it's a draft and missing requirements */}
+                    {!isPublishable && !isPublished && (
+                        <span className="text-[10px] text-slate-500 font-medium mt-1">
+                            * Za objavu su obavezni metapodaci i PDF dokument.
+                        </span>
+                    )}
                 </div>
+
             </div>
         </div>
     );
@@ -157,7 +211,7 @@ export function CoverPhotoSection({ coverFile, serverCover, coverPreviewUrl, onC
                     </div>
                 ) : (
                     <>
-                        <span className="text-4xl mb-3">📸</span>
+                        <IconCamera />
                         <p className="text-sm text-slate-600 mb-4">Ova fotografija će predstavljati projekt u glavnom pretraživaču.</p>
                     </>
                 )}
@@ -261,30 +315,49 @@ export function StorageSection({ formData, onChange }: any) {
 export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
-            <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Glavni Dokument (PDF) <span className="text-red-500">*</span></h2>
+            <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">
+                Glavni Dokument (PDF) <span className="text-red-500">*</span>
+            </h2>
 
-            <div className="border border-slate-200 rounded-md p-6 bg-slate-50">
+            {/* Increased padding and added gap for a less cramped layout */}
+            <div className="border border-slate-200 rounded-md p-8 bg-slate-50 flex flex-col gap-6">
+
                 {serverPdf && !pdfFile && (
-                    <a href={getDownloadUrl(serverPdf)} target="_blank" className="text-sm text-blue-700 font-medium underline block mb-3">
-                        📄 Preuzmi trenutni PDF
-                    </a>
+                    <div className="flex items-center">
+                        <a
+                            href={getDownloadUrl(serverPdf)}
+                            target="_blank"
+                            className="flex items-center gap-2.5 text-base text-blue-700 font-medium hover:text-blue-900 transition-colors group"
+                        >
+                            <IconPDF />
+                            <span className="group-hover:underline">Preuzmi trenutni PDF</span>
+                            <IconDownload />
+                        </a>
+                    </div>
                 )}
 
-                <div className="flex items-center gap-4 mt-2">
-                    <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-100 transition-colors shadow-sm">
+                <div className="flex flex-wrap items-center gap-4">
+                    <label className="cursor-pointer inline-flex items-center bg-white border border-slate-300 text-slate-700 font-medium text-base py-2.5 px-6 rounded-md hover:bg-slate-100 hover:border-slate-400 transition-colors shadow-sm">
                         Odaberi PDF
                         <input type="file" accept=".pdf" className="hidden" onChange={onChange} />
                     </label>
 
                     {(serverPdf || pdfFile) && (
-                        <button onClick={onRemove} className="text-red-600 hover:bg-red-50 border border-slate-300 hover:border-red-200 font-medium text-sm py-2 px-4 rounded transition-colors shadow-sm">
+                        <button
+                            type="button"
+                            onClick={onRemove}
+                            className="text-red-600 hover:bg-red-50 border border-slate-300 hover:border-red-200 font-medium text-base py-2.5 px-6 rounded-md transition-colors shadow-sm"
+                        >
                             Ukloni PDF
                         </button>
                     )}
                 </div>
 
                 {pdfFile && (
-                    <p className="text-sm text-green-600 font-medium mt-3">Pripremljeno: {pdfFile.name}</p>
+                    <div className="flex items-center gap-3 text-base text-emerald-800 font-medium bg-emerald-50 p-4 rounded-md border border-emerald-200">
+                        <IconCheck />
+                        <span>Pripremljeno za prijenos: <span className="font-bold">{pdfFile.name}</span></span>
+                    </div>
                 )}
             </div>
         </section>
@@ -325,7 +398,6 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
                                                 className="w-full text-sm font-medium text-slate-700 bg-transparent resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-1 flex-1 mb-2"
                                                 rows={2} placeholder="Unesite naziv"
                                             />
-                                            {/* ADDED MISSING REMOVE BUTTON HERE */}
                                             <button
                                                 onClick={() => onRemoveServerPhoto(index)}
                                                 className="text-red-500 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-xs px-2 py-1 rounded transition-colors font-medium self-end"
@@ -385,7 +457,6 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
 
 export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onUpdateFileName, onUpdateServerModelName, onRemoveFile, onRemoveServerModel }: any) {
     const [modelPage, setModelPage] = useState(0);
-    const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
 
     const allModels = [
         ...serverPaths.models3d.map((m: any, i: number) => ({isServer: true, data: m, index: i})),
@@ -570,7 +641,7 @@ export function VideoSection({ videoFile, serverVideo, onChange, onUpdateVideoNa
                 </div>
             ) : (
                 <div className="border-2 border-dashed border-slate-300 rounded-md p-8 bg-slate-50 flex flex-col items-center justify-center transition-colors hover:bg-slate-100">
-                    <span className="text-4xl mb-3 block">🎥</span>
+                    <IconVideo />
                     <p className="text-sm text-slate-600 mb-4">Ovdje možete priložiti videozapis o projektu.</p>
                     <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm">
                         Odaberi video

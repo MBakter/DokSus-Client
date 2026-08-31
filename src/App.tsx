@@ -7,7 +7,7 @@ import {Register} from "./pages/Register.tsx";
 import {Account} from "./pages/Account.tsx";
 import {PublicProfile} from "./pages/PublicProfile.tsx";
 import {DocumentEditor} from "./pages/document_editor/DocumentEditor.tsx";
-
+import {DocumentViewer} from "./pages/DocumentViewer.tsx";
 
 export function App() {
     return (
@@ -21,6 +21,7 @@ export function App() {
                     <Route path="/profil/:email" component={PublicProfile} />
                     <Route path="/novo" component={DocumentEditor} />
                     <Route path="/uredi/:id" component={DocumentEditor} />
+                    <Route path="/dokument/:id" component={DocumentViewer} />
                 </Router>
             </Layout>
         </AuthProvider>

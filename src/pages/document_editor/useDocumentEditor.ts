@@ -40,6 +40,8 @@ export function useDocumentEditor(id?: string) {
     const [formData, setFormData] = useState<DocumentContent>(INITIAL_DATA);
     const [snapshot, setSnapshot] = useState<DocumentContent>(INITIAL_DATA);
 
+    const [isPublished, setIsPublished] = useState(false);
+
     // --- Local Files State ---
     const [files, setFiles] = useState<{
         cover: File | null;
@@ -88,6 +90,7 @@ export function useDocumentEditor(id?: string) {
             const document = await fetchDocumentById(docId);
             setFormData(document.content);
             setSnapshot(document.content);
+            setIsPublished(document.isPublished);
 
             const fetchedPhotos = (document as any).projectPhotos || [];
             const fetchedModels = (document as any).models3d || [];
@@ -306,7 +309,7 @@ export function useDocumentEditor(id?: string) {
     };
 
     return {
-        documentId, isSaving, isLoading, formData, files, serverPaths, coverPreviewUrl,
+        documentId, isSaving, isLoading, isPublished, formData, files, serverPaths, coverPreviewUrl,
         isPublishable, hasChanges,
         handleInputChange, handleSingleFileChange, handleMultipleFilesChange,
         handleUpdateFileName, handleUpdateServerPhotoName, handleUpdateServerModelName, handleUpdateVideoName,
