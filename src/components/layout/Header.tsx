@@ -86,9 +86,9 @@ export function TopBar() {
     return (
         <div className="flex items-center justify-between px-8 py-4 border-b border-slate-200 bg-white shadow-sm z-20 relative">
             <div className="flex items-center gap-10">
-                {/* Brand Logo (Asset instead of text) */}
+                {/* Logo */}
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => route('/')}>
-                    <img src="/src/assets/preact.svg" alt="Doksus OKIRU" className="h-10 w-auto" />
+                    <img src="/src/assets/logo.svg" alt="Doksus OKIRU" className="h-12 w-auto" />
                 </div>
 
                 {/* Primary Navigation */}

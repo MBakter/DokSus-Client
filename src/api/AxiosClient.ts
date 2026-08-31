@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {getToken} from "../util/Utilities.ts";
 
 // Access the environment variable in Vite
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -15,7 +16,7 @@ const axiosClient = axios.create({
 // Request Interceptor: Automatically attach the JWT token to every request if it exists
 axiosClient.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('jwt_token');
+        const token = getToken();
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }

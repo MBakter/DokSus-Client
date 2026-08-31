@@ -1,13 +1,12 @@
 import type {Document, PaginatedResponse} from '../../types/Document.ts';
 import axiosClient from "../AxiosClient.ts";
-import {populateOwnerProfiles} from "./UserProfileApi.ts";
+import {getToken} from "../../util/Utilities.ts";
 
 export const fetchDocuments = async (
     page: number,
     category: string | null,
     search: string | null
 ): Promise<PaginatedResponse<Document>> => {
-
     const headers: Record<string, string> = {};
     if (category) headers['Category'] = category;
 
@@ -19,27 +18,19 @@ export const fetchDocuments = async (
         headers
     });
 
-    // Intercept and populate profiles before returning to the UI
-    const populatedContent = await populateOwnerProfiles(response.data.content);
-
-    return {
-        ...response.data,
-        content: populatedContent
-    };
+    return response.data;
 };
 
 export const fetchUserPublishedDocuments = async (email: string): Promise<Document[]> => {
     const response = await axiosClient.get<Document[]>('/documents/user', {
         params: { email }
     });
-
-    // Reuse the helper to ensure the user's profile is joined to the documents
-    return await populateOwnerProfiles(response.data);
+    return response.data;
 };
 
 export const fetchMyDocuments = async (): Promise<Document[]> => {
     const response = await axiosClient.get<Document[]>('/documents/me');
-    return await populateOwnerProfiles(response.data);
+    return response.data;
 };
 
 export const fetchDocumentById = async (id: string): Promise<Document> => {
@@ -48,7 +39,7 @@ export const fetchDocumentById = async (id: string): Promise<Document> => {
 };
 
 export const createDocument = async (payload: FormData) => {
-    const token = localStorage.getItem("jwt_token");
+    const token = getToken();
     const response = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -59,7 +50,7 @@ export const createDocument = async (payload: FormData) => {
 };
 
 export const updateDocument = async (id: string, payload: FormData): Promise<Document> => {
-    const token = localStorage.getItem("jwt_token");
+    const token = getToken();
     const response = await fetch(`/api/documents/${id}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` },

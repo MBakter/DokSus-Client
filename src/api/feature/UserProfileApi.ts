@@ -1,6 +1,6 @@
 import type {UserProfile} from "../../types/UserProfile.ts";
 import axiosClient from "../AxiosClient.ts";
-import type {Document} from "../../types/Document.ts";
+import {getToken} from "../../util/Utilities.ts";
 
 const fetchUserProfiles = async (emails: string[]): Promise<Record<string, UserProfile>> => {
     if (emails.length === 0) return {};
@@ -24,12 +24,26 @@ export const fetchSingleUserProfile = async (email: string): Promise<UserProfile
     return profiles[email] || null;
 };
 
-export const populateOwnerProfiles = async (documents: Document[]): Promise<Document[]> => {
-    const emails = documents.map(doc => doc.ownerEmail);
-    const profiles = await fetchUserProfiles(emails);
+export const searchUsersByQuery = async (query: string): Promise<UserProfile[]> => {
+    if (!query || query.length < 2) return [];
 
-    return documents.map(doc => ({
-        ...doc,
-        ownerProfile: profiles[doc.ownerEmail]
-    }));
+    const token = getToken();
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`/api/users/search?query=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch users');
+    }
+
+    return await response.json();
 };

@@ -4,6 +4,8 @@ export interface Document {
     id: string;
     isPublished: boolean;
     ownerEmail: string;
+    visibility: Visibility;
+    coAuthorEmails: string[];
     creationDate: string;
     publicationDate: string;
     content: DocumentContent;
@@ -11,6 +13,12 @@ export interface Document {
     coverPath: string;
     model3dPath: string;
     ownerProfile?: UserProfile;
+    authorProfiles?: UserProfile[];
+}
+
+export enum Visibility {
+    PUBLIC = 'PUBLIC',
+    OKIRU = 'OKIRU'
 }
 
 export interface DocumentContent {

@@ -7,4 +7,4 @@
   */
 export const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
 
-
+export const getToken = () => localStorage.getItem('jwt_token');

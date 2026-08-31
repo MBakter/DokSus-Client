@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'preact/hooks';
-import type {DocumentContent} from "../../types/Document.ts";
+import { useState, useEffect } from 'preact/hooks';
+import {type DocumentContent, Visibility} from "../../types/Document.ts";
 import {createDocument, fetchDocumentById, updateDocument} from "../../api/feature/DocumentApi.ts";
+import type {UserProfile} from "../../types/UserProfile.ts";
 
 export interface NamedFile {
     file: File;
@@ -40,7 +41,14 @@ export function useDocumentEditor(id?: string) {
     const [formData, setFormData] = useState<DocumentContent>(INITIAL_DATA);
     const [snapshot, setSnapshot] = useState<DocumentContent>(INITIAL_DATA);
 
+    // --- Visibility & Publication State ---
     const [isPublished, setIsPublished] = useState(false);
+    const [visibility, setVisibility] = useState<Visibility>(Visibility.OKIRU);
+    const [initialVisibility, setInitialVisibility] = useState<Visibility>(Visibility.OKIRU);
+
+    // --- Co-Authors ---
+    const [coAuthors, setCoAuthors] = useState<UserProfile[]>([]);
+    const [initialCoAuthors, setInitialCoAuthors] = useState<UserProfile[]>([]);
 
     // --- Local Files State ---
     const [files, setFiles] = useState<{
@@ -90,11 +98,19 @@ export function useDocumentEditor(id?: string) {
             const document = await fetchDocumentById(docId);
             setFormData(document.content);
             setSnapshot(document.content);
-            setIsPublished(document.isPublished);
 
+            // Set root-level properties
+            setIsPublished(document.isPublished);
+            setVisibility(document.visibility || Visibility.OKIRU);
+            setInitialVisibility(document.visibility || Visibility.OKIRU);
+
+            const fetchedAuthors = (document as any).authorProfiles || [];
             const fetchedPhotos = (document as any).projectPhotos || [];
             const fetchedModels = (document as any).models3d || [];
             const fetchedVideo = (document as any).video || null;
+
+            setCoAuthors(fetchedAuthors);
+            setInitialCoAuthors(fetchedAuthors);
 
             setServerPaths({
                 cover: document.coverPath || '',
@@ -116,6 +132,14 @@ export function useDocumentEditor(id?: string) {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleAddCoAuthor = (author: UserProfile) => {
+        setCoAuthors(prev => [...prev, author]);
+    };
+
+    const handleRemoveCoAuthor = (email: string) => {
+        setCoAuthors(prev => prev.filter(a => a.email !== email));
     };
 
     // --- Input Handlers ---
@@ -236,21 +260,31 @@ export function useDocumentEditor(id?: string) {
     const isPublishable = isFormFilled && (files.pdf !== null || serverPaths.pdf !== '');
 
     const hasTextChanges = JSON.stringify(formData) !== JSON.stringify(snapshot);
+    const hasVisibilityChange = visibility !== initialVisibility;
     const hasServerPhotoChanges = JSON.stringify(serverPaths.projectPhotos) !== JSON.stringify(initialServerState.photos);
     const hasServerModelChanges = JSON.stringify(serverPaths.models3d) !== JSON.stringify(initialServerState.models);
     const hasServerVideoChanges = JSON.stringify(serverPaths.video) !== JSON.stringify(initialServerState.video);
     const hasServerCoverChanges = serverPaths.cover !== initialServerState.cover;
     const hasServerPdfChanges = serverPaths.pdf !== initialServerState.pdf;
-
+    const hasCoAuthorsChanges = JSON.stringify(coAuthors) !== JSON.stringify(initialCoAuthors);
     const hasFileChanges = files.cover !== null || files.pdf !== null || files.video !== null || files.projectPhotos.length > 0 || files.models3d.length > 0;
-    const hasChanges = hasTextChanges || hasFileChanges || hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerCoverChanges || hasServerPdfChanges;
+
+    // Check if ANYTHING has been modified
+    const hasChanges = hasTextChanges || hasVisibilityChange || hasCoAuthorsChanges || hasFileChanges || hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerCoverChanges || hasServerPdfChanges;
 
     const handleSave = async (publish: boolean) => {
         setIsSaving(true);
         try {
             const payload = new FormData();
+
+            // Append Root metadata
             payload.append("document", new Blob([JSON.stringify(formData)], { type: "application/json" }), "document.json");
             payload.append("isPublished", String(publish));
+            payload.append("visibility", visibility); // Added root parameter for the backend
+
+            coAuthors.forEach(author => {
+                payload.append("coAuthorEmails", author.email);
+            });
 
             // Existing server files that were renamed
             if (hasServerPhotoChanges) {
@@ -294,8 +328,9 @@ export function useDocumentEditor(id?: string) {
                 setDocumentId(newDoc.id);
             }
 
-            if (publish) window.location.href = '/racun';
-            else {
+            if (publish) {
+                window.location.href = '/racun';
+            } else {
                 if (documentId) loadExistingDocument(documentId);
                 // Reset local staging
                 setFiles({ cover: null, pdf: null, video: null, projectPhotos: [], models3d: [] });
@@ -310,8 +345,8 @@ export function useDocumentEditor(id?: string) {
 
     return {
         documentId, isSaving, isLoading, isPublished, formData, files, serverPaths, coverPreviewUrl,
-        isPublishable, hasChanges,
-        handleInputChange, handleSingleFileChange, handleMultipleFilesChange,
+        isPublishable, hasChanges, visibility, coAuthors,
+        setVisibility, handleAddCoAuthor, handleRemoveCoAuthor, handleInputChange, handleSingleFileChange, handleMultipleFilesChange,
         handleUpdateFileName, handleUpdateServerPhotoName, handleUpdateServerModelName, handleUpdateVideoName,
         handleRemoveFile, handleRemoveServerModel, handleRemoveVideo, handleRemoveCover, handleRemovePdf, handleRemoveServerPhoto,
         handleSave,

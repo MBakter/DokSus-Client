@@ -55,7 +55,7 @@ export function PublicProfile({ email }: PublicProfileProps) {
                     </h1>
                     {profile && (
                         <p className="text-sm text-slate-500 mt-1">
-                            {profile.role === 'ROLE_ADMIN' ? 'Administrator' : 'Korisnik'}
+                            {/*profile.role === 'ROLE_ADMIN' ? 'Administrator' : 'Korisnik'*/}
                             {' • '}{documents.length} javnih dokumenata
                         </p>
                     )}

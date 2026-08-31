@@ -45,7 +45,7 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
             <div className="w-full min-h-screen flex items-center justify-center bg-slate-50">
                 <div className="flex flex-col items-center gap-4 text-slate-600">
                     <svg className="animate-spin h-8 w-8 text-blue-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     <p className="font-medium tracking-wide">Učitavanje podataka...</p>
@@ -62,14 +62,23 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
         );
     }
 
-    const { content, coverPath, pdfPath, video, projectPhotos, models3d } = document;
+    const { content, coverPath, pdfPath, video, projectPhotos, models3d, ownerEmail, ownerProfile, authorProfiles } = document;
     const hasMultimedia = pdfPath || (projectPhotos && projectPhotos.length > 0) || (models3d && models3d.length > 0) || video;
+
+    // Combine and deduplicate profiles
+    const allProfiles = [ownerProfile, ...(authorProfiles || [])].filter(Boolean);
+    const profiles = Array.from(new Map(allProfiles.map(p => [p.email, p])).values());
 
     return (
         <div className="w-full min-h-screen pb-20 pt-8 flex flex-col items-center selection:bg-blue-200">
             <div className="w-full max-w-5xl px-4 lg:px-0 flex flex-col gap-6">
 
-                <HeroSection content={content} coverPath={coverPath} />
+                <HeroSection
+                    content={content}
+                    coverPath={coverPath}
+                    profiles={profiles}
+                    ownerEmail={ownerEmail}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <TechDataSection content={content} />
@@ -78,7 +87,7 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
 
                 {hasMultimedia && (
                     <div className="bg-white p-8 rounded-md shadow-sm border border-slate-300 flex flex-col gap-10">
-                        <h3 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-4 ">Multimedija i Prilozi</h3>
+                        <h3 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-4">Multimedija i Prilozi</h3>
 
                         <PdfSection pdfPath={pdfPath} />
                         <PhotoGallerySection projectPhotos={projectPhotos} />
@@ -106,78 +115,119 @@ const DetailItem = ({ label, value, fullWidth = false }: { label: string, value:
 
 // --- View Sections ---
 
-const HeroSection = ({ content, coverPath }: { content: any, coverPath: string | null }) => (
-    <div className="bg-white rounded-md shadow-sm border border-slate-300 flex flex-col md:flex-row border-t-4 border-t-blue-900">
-        <div className="w-full md:w-5/12 lg:w-1/2 bg-slate-50 border-r border-slate-200 relative min-h-[350px]">
-            {coverPath ? (
-                <img
-                    src={getDownloadUrl(coverPath)}
-                    alt={content.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                />
-            ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <IconImagePlaceholder />
+const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: any, coverPath: string | null, profiles: any[], ownerEmail: string }) => {
+    const getInitials = (name: string, surname: string) => `${name?.charAt(0) || ''}${surname?.charAt(0) || ''}`.toUpperCase();
+
+    return (
+        <div className="bg-white rounded-md shadow-sm border border-slate-300 flex flex-col md:flex-row border-t-4 border-t-blue-900">
+            <div className="w-full md:w-5/12 lg:w-1/2 bg-slate-50 border-r border-slate-200 relative min-h-[350px]">
+                {coverPath ? (
+                    <img
+                        src={getDownloadUrl(coverPath)}
+                        alt={content.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <IconImagePlaceholder />
+                    </div>
+                )}
+            </div>
+
+            <div className="w-full md:w-7/12 lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
+                <div className="flex flex-wrap items-center gap-4 mb-6">
+                    {content.category && (
+                        <span className="text-blue-800 text-sm font-bold tracking-widest uppercase">
+                            {content.category}
+                        </span>
+                    )}
+                    {content.invNumber && (
+                        <span className="px-2.5 py-1 bg-slate-100 text-slate-800 text-sm font-mono font-semibold rounded border border-slate-300">
+                            OKIRU: {content.invNumber}
+                        </span>
+                    )}
                 </div>
-            )}
-        </div>
 
-        <div className="w-full md:w-7/12 lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
-            <div className="flex flex-wrap items-center gap-4 mb-6">
-                {content.category && (
-                    <span className="text-blue-800 text-sm font-bold tracking-widest uppercase">
-                        {content.category}
-                    </span>
-                )}
-                {content.invNumber && (
-                    <span className="px-2.5 py-1 bg-slate-100 text-slate-800 text-sm font-mono font-semibold rounded border border-slate-300">
-                        OKIRU: {content.invNumber}
-                    </span>
-                )}
+                <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-8 leading-tight break-words">
+                    {content.name}
+                </h1>
+
+                <div className="space-y-6">
+                    {content.author && (
+                        <div className="flex items-start gap-4">
+                            <div className="text-slate-400 mt-0.5"><IconUser /></div>
+                            <div>
+                                <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Autor / Umjetnik</p>
+                                <p className="text-base font-medium text-slate-900 break-words">{content.author}</p>
+                            </div>
+                        </div>
+                    )}
+                    {content.student && (
+                        <div className="flex items-start gap-4">
+                            <div className="text-slate-400 mt-0.5"><IconStudent /></div>
+                            <div>
+                                <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Student (Izvođač)</p>
+                                <p className="text-base font-medium text-slate-900 break-words">{content.student}</p>
+                            </div>
+                        </div>
+                    )}
+                    {content.professor && (
+                        <div className="flex items-start gap-4">
+                            <div className="text-slate-400 mt-0.5"><IconMentor /></div>
+                            <div>
+                                <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Mentor</p>
+                                <p className="text-base font-medium text-slate-900 break-words">{content.professor}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* OKIRU Authors Block */}
+                    {profiles.length > 0 && (
+                        <div className="pt-6 border-t border-slate-100">
+                            <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-3">Autori projekta</p>
+                            <div className="flex flex-wrap gap-2.5">
+                                {profiles.map(profile => {
+                                    const isOwner = profile.email === ownerEmail;
+                                    return (
+                                        <a
+                                            key={profile.email}
+                                            href={`/profil/${encodeURIComponent(profile.email)}`}
+                                            className={`flex items-center gap-2.5 border rounded-full pl-1.5 pr-4 py-1.5 shadow-sm transition-colors group bg-slate-50 border-slate-200 hover:border-slate-400`}
+                                            title={isOwner ? 'Vlasnik projekta' : 'Koautor'}
+                                        >
+                                            <div className={`w-7 h-7 flex items-center justify-center text-white rounded-full text-[10px] font-bold shrink-0 transition-transform group-hover:scale-105 ${
+                                                isOwner ? 'bg-blue-900' : 'bg-slate-700'
+                                            }`}>
+                                                {getInitials(profile.name, profile.surname)}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className={`text-sm font-bold leading-none mb-0.5 text-slate-800`}>
+                                                    {profile.name} {profile.surname}
+                                                </span>
+                                                {isOwner && (
+                                                    <span className="text-[9px] uppercase tracking-wider text-blue-700 font-bold">
+                                                        Vlasnik
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {content.date && (
+                        <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
+                            <div className="text-slate-400"><IconCalendar /></div>
+                            <span className="text-slate-700 text-base">Datacija: <strong>{content.date}</strong></span>
+                        </div>
+                    )}
+                </div>
             </div>
-
-            <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-8 leading-tight break-words">
-                {content.name}
-            </h1>
-
-            <div className="space-y-6">
-                {content.author && (
-                    <div className="flex items-start gap-4">
-                        <div className="text-slate-400 mt-0.5"><IconUser /></div>
-                        <div>
-                            <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Autor / Umjetnik</p>
-                            <p className="text-base font-medium text-slate-900 break-words">{content.author}</p>
-                        </div>
-                    </div>
-                )}
-                {content.student && (
-                    <div className="flex items-start gap-4">
-                        <div className="text-slate-400 mt-0.5"><IconStudent /></div>
-                        <div>
-                            <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Student (Izvođač)</p>
-                            <p className="text-base font-medium text-slate-900 break-words">{content.student}</p>
-                        </div>
-                    </div>
-                )}
-                {content.professor && (
-                    <div className="flex items-start gap-4">
-                        <div className="text-slate-400 mt-0.5"><IconMentor /></div>
-                        <div>
-                            <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Mentor</p>
-                            <p className="text-base font-medium text-slate-900 break-words">{content.professor}</p>
-                        </div>
-                    </div>
-                )}
-                {content.date && (
-                    <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
-                        <div className="text-slate-400"><IconCalendar /></div>
-                        <span className="text-slate-700 text-base">Datacija: <strong>{content.date}</strong></span>
-                    </div>
-                )}
-            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const TechDataSection = ({ content }: { content: any }) => (
     <div className="bg-white p-8 rounded-md shadow-sm border border-slate-300">
