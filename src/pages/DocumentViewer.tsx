@@ -5,7 +5,7 @@ import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
-import {getDownloadUrl} from "../util/Utilities.ts";
+import {getDownloadUrl, getInitials} from "../util/Utilities.ts";
 import {
     IconCalendar,
     IconCube,
@@ -116,8 +116,6 @@ const DetailItem = ({ label, value, fullWidth = false }: { label: string, value:
 // --- View Sections ---
 
 const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: any, coverPath: string | null, profiles: any[], ownerEmail: string }) => {
-    const getInitials = (name: string, surname: string) => `${name?.charAt(0) || ''}${surname?.charAt(0) || ''}`.toUpperCase();
-
     return (
         <div className="bg-white rounded-md shadow-sm border border-slate-300 flex flex-col md:flex-row border-t-4 border-t-blue-900">
             <div className="w-full md:w-5/12 lg:w-1/2 bg-slate-50 border-r border-slate-200 relative min-h-[350px]">

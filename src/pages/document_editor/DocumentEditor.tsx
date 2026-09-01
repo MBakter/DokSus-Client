@@ -5,7 +5,7 @@ import {Zoom} from "yet-another-react-lightbox/plugins";
 import {type DocumentContent, Visibility} from "../../types/Document.ts";
 import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
-import {getDownloadUrl} from "../../util/Utilities.ts";
+import {getDownloadUrl, getInitials} from "../../util/Utilities.ts";
 import {
     IconCamera,
     IconCheck,
@@ -295,9 +295,6 @@ export function CoAuthorsSection({ selectedAuthors, onAddAuthor, onRemoveAuthor 
         setSearchQuery('');
         setShowDropdown(false);
     };
-
-    const getInitials = (name: string, surname: string) =>
-        `${name?.charAt(0) || ''}${surname?.charAt(0) || ''}`.toUpperCase();
 
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm relative" ref={dropdownRef}>
