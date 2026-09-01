@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'preact/hooks';
 import {type DocumentContent, Visibility} from "../../types/Document.ts";
-import {createDocument, fetchDocumentById, updateDocument} from "../../api/feature/DocumentApi.ts";
+import {
+    createDocumentMetadata, deleteCover, deletePdf,
+    fetchDocumentById, syncModels3d, syncProjectPhotos, syncVideo,
+    updateDocumentMetadata, uploadCover, uploadModels3d, uploadPdf, uploadProjectPhotos, uploadVideo
+} from "../../api/feature/DocumentApi.ts";
 import type {UserProfile} from "../../types/UserProfile.ts";
 
 export interface NamedFile {
@@ -274,70 +278,122 @@ export function useDocumentEditor(id?: string) {
 
     const handleSave = async (publish: boolean) => {
         setIsSaving(true);
+        const failedTasks: string[] = [];
+
+        let currentDocId = documentId;
+
+        // Helper to catch individual file errors without breaking the whole process
+        const safeTask = (promise: Promise<any>, taskName: string) => {
+            return promise.catch((err) => {
+                console.error(`Task failed: ${taskName}`, err);
+                failedTasks.push(taskName);
+            });
+        };
+
         try {
-            const payload = new FormData();
+            const metadataPayload = {
+                content: formData,
+                isPublished: publish,
+                visibility: visibility,
+                coAuthorEmails: coAuthors.map(a => a.email)
+            };
 
-            // Append Root metadata
-            payload.append("document", new Blob([JSON.stringify(formData)], { type: "application/json" }), "document.json");
-            payload.append("isPublished", String(publish));
-            payload.append("visibility", visibility); // Added root parameter for the backend
-
-            coAuthors.forEach(author => {
-                payload.append("coAuthorEmails", author.email);
-            });
-
-            // Existing server files that were renamed
-            if (hasServerPhotoChanges) {
-                payload.append("existingProjectPhotos", new Blob([JSON.stringify(serverPaths.projectPhotos)], { type: "application/json" }), "existingPhotos.json");
-            }
-            if (hasServerModelChanges) {
-                payload.append("existingModels3d", new Blob([JSON.stringify(serverPaths.models3d)], { type: "application/json" }), "existingModels3d.json");
+            if (!currentDocId) {
+                const newDoc = await createDocumentMetadata(metadataPayload);
+                currentDocId = newDoc.id;
+                setDocumentId(currentDocId);
+                window.history.replaceState(null, '', `/uredi/${currentDocId}`);
+            } else {
+                await updateDocumentMetadata(currentDocId, metadataPayload);
             }
 
-            // Flags for deleting single files
-            if (!serverPaths.cover && initialServerState.cover) payload.append("removeServerCover", "true");
-            if (!serverPaths.pdf && initialServerState.pdf) payload.append("removeServerPdf", "true");
-            if (!serverPaths.video && initialServerState.video) payload.append("removeServerVideo", "true");
-            else if (serverPaths.video && hasServerVideoChanges) {
-                payload.append("existingVideo", new Blob([JSON.stringify(serverPaths.video)], { type: "application/json" }), "existingVideo.json");
+            if (!currentDocId) {
+                throw new Error("Neuspješno dohvaćanje ID-a dokumenta.");
             }
 
-            // Append new physical files
-            if (files.cover) payload.append("cover", files.cover);
-            if (files.pdf) payload.append("pdf", files.pdf);
+            // CONCURRENT FILE OPERATIONS
+            const fileTasks: Promise<void>[] = [];
+
+            // --- Cover ---
+            if (files.cover) {
+                fileTasks.push(safeTask(uploadCover(currentDocId, files.cover), "Spremanje naslovne fotografije"));
+            } else if (hasServerCoverChanges && !serverPaths.cover) {
+                fileTasks.push(safeTask(deleteCover(currentDocId), "Brisanje naslovne fotografije"));
+            }
+
+            // --- PDF ---
+            if (files.pdf) {
+                fileTasks.push(safeTask(uploadPdf(currentDocId, files.pdf), "Spremanje PDF dokumenta"));
+            } else if (hasServerPdfChanges && !serverPaths.pdf) {
+                fileTasks.push(safeTask(deletePdf(currentDocId), "Brisanje PDF dokumenta"));
+            }
+
+            // --- Video ---
             if (files.video) {
-                payload.append("video", files.video.file);
-                payload.append("videoName", files.video.name);
+                fileTasks.push(safeTask(uploadVideo(currentDocId, files.video.file, files.video.name), "Spremanje videa"));
+            } else if (!serverPaths.video && initialServerState.video) {
+                // Passed RAW - API file handles the wrapping
+                fileTasks.push(safeTask(syncVideo(currentDocId, null), "Brisanje videa"));
+            } else if (serverPaths.video && hasServerVideoChanges) {
+                // Passed RAW - API file handles the wrapping
+                fileTasks.push(safeTask(syncVideo(currentDocId, serverPaths.video), "Preimenovanje videa"));
             }
 
-            files.projectPhotos.forEach(item => {
-                payload.append("projectPhotos", item.file);
-                payload.append("projectPhotoNames", item.name);
-            });
-
-            files.models3d.forEach(item => {
-                payload.append("models3d", item.file);
-                payload.append("models3dNames", item.name);
-            });
-
-            // Execute API Call
-            if (documentId) {
-                await updateDocument(documentId, payload);
-            } else {
-                const newDoc = await createDocument(payload);
-                setDocumentId(newDoc.id);
+            // --- Photos ---
+            if (hasServerPhotoChanges) {
+                fileTasks.push(safeTask(syncProjectPhotos(currentDocId, serverPaths.projectPhotos), "Ažuriranje postojećih fotografija"));
+            }
+            if (files.projectPhotos.length > 0) {
+                const photoFiles = files.projectPhotos.map(p => p.file);
+                const photoNames = files.projectPhotos.map(p => p.name);
+                fileTasks.push(safeTask(uploadProjectPhotos(currentDocId, photoFiles, photoNames), "Prijenos novih fotografija"));
             }
 
-            if (publish) {
-                window.location.href = '/racun';
+            // --- Models ---
+            if (hasServerModelChanges) {
+                fileTasks.push(safeTask(syncModels3d(currentDocId, serverPaths.models3d), "Ažuriranje postojećih 3D modela"));
+            }
+            if (files.models3d.length > 0) {
+                const modelFiles = files.models3d.map(m => m.file);
+                const modelNames = files.models3d.map(m => m.name);
+                fileTasks.push(safeTask(uploadModels3d(currentDocId, modelFiles, modelNames), "Prijenos novih 3D modela"));
+            }
+
+            // Execute all file operations concurrently
+            if (fileTasks.length > 0) {
+                await Promise.all(fileTasks);
+            }
+
+            // EVALUATION
+            if (failedTasks.length > 0) {
+                alert(`Spremljeno s greškama. Sljedeće operacije nisu uspjele:\n\n- ${failedTasks.join('\n- ')}\n\nMolimo pokušajte ponovno dodati ove datoteke.`);
+                setIsPublished(publish);
             } else {
-                if (documentId) loadExistingDocument(documentId);
-                // Reset local staging
+                setIsPublished(publish);
+                if (publish) {
+                    window.location.href = '/racun';
+                    return;
+                }
+            }
+
+        } catch (error) {
+            console.error("Critical metadata save failure:", error);
+            alert("Dogodila se greška prilikom spremanja projekta. Provjerite internetsku vezu i pokušajte ponovno.");
+            setIsSaving(false);
+            return;
+        }
+
+        try {
+            if (currentDocId) {
+                // Calling this inherently resets `hasChanges` to false by updating snapshot & initialServerState
+                await loadExistingDocument(currentDocId);
+
+                // Clear local staging
                 setFiles({ cover: null, pdf: null, video: null, projectPhotos: [], models3d: [] });
                 setCoverPreviewUrl(null);
             }
-        } catch (error) {
-            console.error("Failed to save document:", error);
+        } catch (resyncError) {
+            console.error("Failed to resync state after save", resyncError);
         } finally {
             setIsSaving(false);
         }
