@@ -1,21 +1,23 @@
-import type {Document, PaginatedResponse} from '../../types/Document.ts';
+import type {Document, PaginatedResponse} from '../../data/types/Document.ts';
 import axiosClient from "../AxiosClient.ts";
-import {getToken} from "../../util/Utilities.ts";
 
 export const fetchDocuments = async (
     page: number,
     category: string | null,
     search: string | null
 ): Promise<PaginatedResponse<Document>> => {
-    const headers: Record<string, string> = {};
-    if (category) headers['Category'] = category;
-
     const params: Record<string, string | number> = { page, size: 30 };
-    if (search) params['search'] = search;
+
+    if (search) {
+        params['search'] = search;
+    }
+
+    if (category && category !== 'UNSPECIFIED') {
+        params['category'] = category;
+    }
 
     const response = await axiosClient.get<PaginatedResponse<Document>>('/documents', {
-        params,
-        headers
+        params
     });
 
     return response.data;
@@ -41,198 +43,80 @@ export const fetchDocumentById = async (id: string): Promise<Document> => {
 //// EDIT DOCUMENTS
 
 export const createDocumentMetadata = async (data: any) => {
-    const token = getToken();
-    const response = await fetch('/api/documents', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    });
-
-    if (!response.ok) throw new Error("Failed to create document metadata");
-    return response.json();
+    const response = await axiosClient.post('/documents', data);
+    return response.data;
 };
 
 export const updateDocumentMetadata = async (id: string, data: any) => {
-    const token = getToken();
-    const response = await fetch(`/api/documents/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    });
-
-    if (!response.ok) throw new Error("Failed to update document metadata");
-    return response.json();
+    const response = await axiosClient.put(`/documents/${id}`, data);
+    return response.data;
 };
 
+// Axios automatically sets the correct multipart/form-data boundary when passing FormData
 export const uploadCover = async (id: string, file: File) => {
-    const token = getToken();
     const formData = new FormData();
     formData.append("cover", file);
 
-    const response = await fetch(`/api/documents/${id}/cover`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`
-            // Do NOT set 'Content-Type' manually when sending FormData.
-            // The browser must automatically set it to 'multipart/form-data' with the correct boundary.
-        },
-        body: formData
-    });
-
-    if (!response.ok) throw new Error("Failed to upload cover photo");
-    return response.json();
+    const response = await axiosClient.post(`/documents/${id}/cover`, formData);
+    return response.data;
 };
 
 export const deleteCover = async (id: string) => {
-    const token = getToken();
-    const response = await fetch(`/api/documents/${id}/cover`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
-
-    if (!response.ok) throw new Error("Failed to delete cover photo");
-    // No json() return expected for a successful DELETE (usually returns 204 No Content)
+    await axiosClient.delete(`/documents/${id}/cover`);
 };
 
 export const uploadPdf = async (id: string, file: File) => {
-    const token = getToken();
     const formData = new FormData();
     formData.append("pdf", file);
 
-    const response = await fetch(`/api/documents/${id}/pdf`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        body: formData
-    });
-
-    if (!response.ok) throw new Error("Failed to upload PDF");
-    return response.json();
+    const response = await axiosClient.post(`/documents/${id}/pdf`, formData);
+    return response.data;
 };
 
 export const deletePdf = async (id: string) => {
-    const token = getToken();
-    const response = await fetch(`/api/documents/${id}/pdf`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
-
-    if (!response.ok) throw new Error("Failed to delete PDF");
+    await axiosClient.delete(`/documents/${id}/pdf`);
 };
 
 export const uploadVideo = async (id: string, file: File, name: string) => {
-    const token = getToken();
     const formData = new FormData();
     formData.append("video", file);
     formData.append("videoName", name);
 
-    const response = await fetch(`/api/documents/${id}/video`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`
-            // Again, no Content-Type here for FormData
-        },
-        body: formData
-    });
-
-    if (!response.ok) throw new Error("Failed to upload video");
-    return response.json();
+    const response = await axiosClient.post(`/documents/${id}/video`, formData);
+    return response.data;
 };
 
 export const syncVideo = async (id: string, existingVideo: any | null) => {
-    const token = getToken();
-    const response = await fetch(`/api/documents/${id}/video`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        // Wrapping it to match data class SyncVideoRequest(val existingVideo: NamedFile?)
-        body: JSON.stringify({ existingVideo })
-    });
-
-    if (!response.ok) throw new Error("Failed to sync video state");
-    return response.json();
+    const response = await axiosClient.put(`/documents/${id}/video`, { existingVideo });
+    return response.data;
 };
 
 export const uploadProjectPhotos = async (id: string, files: File[], names: string[]) => {
-    const token = getToken();
     const formData = new FormData();
 
-    // Append multiple files and names under the exact same keys expected by the backend
     files.forEach(file => formData.append("projectPhotos", file));
     names.forEach(name => formData.append("projectPhotoNames", name));
 
-    const response = await fetch(`/api/documents/${id}/photos`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        body: formData
-    });
-
-    if (!response.ok) throw new Error("Failed to upload project photos");
-    return response.json();
+    const response = await axiosClient.post(`/documents/${id}/photos`, formData);
+    return response.data;
 };
 
 export const syncProjectPhotos = async (id: string, existingFiles: any[]) => {
-    const token = getToken();
-    const response = await fetch(`/api/documents/${id}/photos`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        // Wrapping it to match data class SyncFilesRequest(val existingFiles: List<NamedFile>)
-        body: JSON.stringify({ existingFiles })
-    });
-
-    if (!response.ok) throw new Error("Failed to sync project photos");
-    return response.json();
+    const response = await axiosClient.put(`/documents/${id}/photos`, { existingFiles });
+    return response.data;
 };
 
 export const uploadModels3d = async (id: string, files: File[], names: string[]) => {
-    const token = getToken();
     const formData = new FormData();
 
     files.forEach(file => formData.append("models3d", file));
     names.forEach(name => formData.append("models3dNames", name));
 
-    const response = await fetch(`/api/documents/${id}/models`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-        body: formData
-    });
-
-    if (!response.ok) throw new Error("Failed to upload 3D models");
-    return response.json();
+    const response = await axiosClient.post(`/documents/${id}/models`, formData);
+    return response.data;
 };
 
 export const syncModels3d = async (id: string, existingFiles: any[]) => {
-    const token = getToken();
-    const response = await fetch(`/api/documents/${id}/models`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        // Wrapping it to match data class SyncFilesRequest(val existingFiles: List<NamedFile>)
-        body: JSON.stringify({ existingFiles })
-    });
-
-    if (!response.ok) throw new Error("Failed to sync 3D models");
-    return response.json();
+    const response = await axiosClient.put(`/documents/${id}/models`, { existingFiles });
+    return response.data;
 };

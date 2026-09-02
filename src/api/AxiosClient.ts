@@ -33,7 +33,7 @@ axiosClient.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response && error.response.status === 401 || error.response.status === 403) {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
             console.error("Session expired or access denied. Redirecting to login.");
 
             // Completely wipe the dead session data
@@ -43,6 +43,7 @@ axiosClient.interceptors.response.use(
             // Force redirect to the login page
             window.location.href = '/prijava';
         }
+
         return Promise.reject(error);
     }
 );

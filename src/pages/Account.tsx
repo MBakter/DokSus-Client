@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { AuthContext } from '../context/AuthContext';
 import { fetchMyDocuments } from '../api/feature/DocumentApi.ts';
-import type {Document} from '../types/Document';
+import type {Document} from '../data/types/Document';
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
 import {route} from "preact-router";
 

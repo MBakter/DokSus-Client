@@ -13,6 +13,8 @@ import {
     IconPDF,
     IconUser
 } from "../assets/Icons.tsx";
+import type {Document, RestorationData} from "../data/types/Document.ts";
+import type {UserProfile} from "../data/types/UserProfile.ts";
 
 interface DocumentViewerProps {
     id: string;
@@ -20,8 +22,10 @@ interface DocumentViewerProps {
 
 const getModelUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}#model.glb`;
 
+//TODO: REFACTOR UI
+
 export function DocumentViewer({ id }: DocumentViewerProps) {
-    const [document, setDocument] = useState<any>(null);
+    const [document, setDocument] = useState<Document | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -60,27 +64,40 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
         );
     }
 
-    const { content, coverPath, pdfPath, video, projectPhotos, models3d, ownerEmail, ownerProfile, authorProfiles } = document;
+    // Updated to extract from restorationData, files, and profiles objects
+    const { restorationData, files, profiles } = document;
+
+    const coverPath = files?.coverPath;
+    const pdfPath = files?.pdfPath;
+    const video = files?.video;
+    const projectPhotos = files?.projectPhotos;
+    const models3d = files?.models3d;
+
     const hasMultimedia = pdfPath || (projectPhotos && projectPhotos.length > 0) || (models3d && models3d.length > 0) || video;
 
-    // Combine and deduplicate profiles
-    const allProfiles = [ownerProfile, ...(authorProfiles || [])].filter(Boolean);
-    const profiles = Array.from(new Map(allProfiles.map(p => [p.email, p])).values());
+    // Combine and deduplicate profiles from the new nested structure
+    const allProfiles = [
+        profiles?.creatorProfile,
+        ...(profiles?.coCreatorProfiles || [])
+    ].filter((p): p is NonNullable<typeof p> => p !== undefined && p !== null);
+
+    const uniqueProfiles = Array.from(new Map(allProfiles.map(p => [p.email, p])).values());
+    const creatorEmail = profiles?.creatorProfile?.email || '';
 
     return (
         <div className="w-full min-h-screen pb-20 pt-8 flex flex-col items-center selection:bg-blue-200">
             <div className="w-full max-w-5xl px-4 lg:px-0 flex flex-col gap-6">
 
                 <HeroSection
-                    content={content}
+                    restorationData={restorationData}
                     coverPath={coverPath}
-                    profiles={profiles}
-                    ownerEmail={ownerEmail}
+                    profiles={uniqueProfiles}
+                    creatorEmail={creatorEmail}
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <TechDataSection content={content} />
-                    <AnalysisStorageSection content={content} />
+                    <TechDataSection restorationData={restorationData} />
+                    <AnalysisStorageSection restorationData={restorationData} />
                 </div>
 
                 {hasMultimedia && (
@@ -101,7 +118,7 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
 
 // --- Helper Components ---
 
-const DetailItem = ({ label, value, fullWidth = false }: { label: string, value: string, fullWidth?: boolean }) => {
+const DetailItem = ({ label, value, fullWidth = false }: { label: string; value: string; fullWidth?: boolean }) => {
     if (!value || value.trim() === '') return null;
     return (
         <div className={`flex flex-col ${fullWidth ? 'col-span-full' : ''} border-b border-slate-100 pb-3`}>
@@ -113,14 +130,21 @@ const DetailItem = ({ label, value, fullWidth = false }: { label: string, value:
 
 // --- View Sections ---
 
-const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: any, coverPath: string | null, profiles: any[], ownerEmail: string }) => {
+interface HeroSectionProps {
+    restorationData: RestorationData;
+    coverPath: string | null | undefined;
+    profiles: UserProfile[];
+    creatorEmail: string;
+}
+
+const HeroSection = ({ restorationData, coverPath, profiles, creatorEmail }: HeroSectionProps) => {
     return (
         <div className="bg-white rounded-md shadow-sm border border-slate-300 flex flex-col md:flex-row border-t-4 border-t-blue-900">
             <div className="w-full md:w-5/12 lg:w-1/2 bg-slate-50 border-r border-slate-200 relative min-h-[350px]">
                 {coverPath ? (
                     <img
                         src={getDownloadUrl(coverPath)}
-                        alt={content.name}
+                        alt={restorationData?.name || "Slika predmeta"}
                         className="absolute inset-0 w-full h-full object-cover"
                     />
                 ) : (
@@ -132,29 +156,29 @@ const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: an
 
             <div className="w-full md:w-7/12 lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
                 <div className="flex flex-wrap items-center gap-4 mb-6">
-                    {content.category && (
+                    {restorationData?.category && (
                         <span className="text-blue-800 text-sm font-bold tracking-widest uppercase">
-                            {content.category}
+                            {restorationData.category}
                         </span>
                     )}
-                    {content.invNumber && (
+                    {restorationData?.inventoryNumber && (
                         <span className="px-2.5 py-1 bg-slate-100 text-slate-800 text-sm font-mono font-semibold rounded border border-slate-300">
-                            OKIRU: {content.invNumber}
+                            OKIRU: {restorationData.inventoryNumber}
                         </span>
                     )}
                 </div>
 
                 <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-8 leading-tight break-words">
-                    {content.name}
+                    {restorationData?.name}
                 </h1>
 
                 <div className="space-y-6">
-                    {content.author && (
+                    {restorationData?.author && (
                         <div className="flex items-start gap-4">
                             <div className="text-slate-400 mt-0.5"><IconUser /></div>
                             <div>
                                 <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Autor / Umjetnik</p>
-                                <p className="text-base font-medium text-slate-900 break-words">{content.author}</p>
+                                <p className="text-base font-medium text-slate-900 break-words">{restorationData.author}</p>
                             </div>
                         </div>
                     )}
@@ -165,7 +189,7 @@ const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: an
                             <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-3">Autori projekta</p>
                             <div className="flex flex-wrap gap-2.5">
                                 {profiles.map(profile => {
-                                    const isOwner = profile.email === ownerEmail;
+                                    const isOwner = profile.email === creatorEmail;
                                     return (
                                         <a
                                             key={profile.email}
@@ -195,10 +219,10 @@ const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: an
                         </div>
                     )}
 
-                    {content.date && (
+                    {restorationData?.date && (
                         <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
                             <div className="text-slate-400"><IconCalendar /></div>
-                            <span className="text-slate-700 text-base">Datacija: <strong>{content.date}</strong></span>
+                            <span className="text-slate-700 text-base">Datacija: <strong>{restorationData.date}</strong></span>
                         </div>
                     )}
                 </div>
@@ -207,49 +231,116 @@ const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: an
     );
 };
 
-const TechDataSection = ({ content }: { content: any }) => (
+interface SectionProps {
+    restorationData: any; // Use strict RestorationData type if available
+}
+
+export const TechDataSection = ({ restorationData }: SectionProps) => (
     <div className="bg-white p-8 rounded-md shadow-sm border border-slate-300">
         <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-200 pb-4">
             Tehnološki podaci
         </h3>
         <div className="grid grid-cols-1 gap-y-5 gap-x-4">
-            <DetailItem label="Materijal" value={content.material} />
-            <DetailItem label="Tehnika" value={content.technique} />
-            <DetailItem label="Pigment" value={content.pigment} />
-            <DetailItem label="Vezivo" value={content.binder} />
-            <DetailItem label="Završni sloj" value={content.finishingLayer} />
-            <DetailItem label="Korišteni materijali" value={content.materialsUsed} fullWidth />
+            <DetailItem label="Materijal" value={restorationData?.material} />
+            <DetailItem label="Tehnika" value={restorationData?.technique} />
+            <DetailItem label="Pigmenti" value={restorationData?.pigment} />
+            <DetailItem label="Veziva" value={restorationData?.binder} />
+            <DetailItem label="Završni sloj" value={restorationData?.finishingLayer} />
         </div>
     </div>
 );
 
-const AnalysisStorageSection = ({ content }: { content: any }) => (
-    <div className="bg-white p-8 rounded-md shadow-sm border border-slate-300 flex flex-col gap-8">
-        <div>
-            <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-200 pb-4">
-                Analize i radovi
-            </h3>
-            <div className="grid grid-cols-1 gap-y-5 gap-x-4">
-                <DetailItem label="Vrsta analize" value={content.typeOfAnalysis} />
-                <DetailItem label="Cilj analize" value={content.goalOfAnalysis} />
-                <DetailItem label="Provedeni radovi" value={content.works} fullWidth />
-                <DetailItem label="Ključne riječi" value={content.keywords} fullWidth />
-            </div>
-        </div>
+export const AnalysisStorageSection = ({ restorationData }: SectionProps) => {
+    // Parse keywords safely (handles comma-separated string format)
+    const keywordsList = restorationData?.keywords
+        ? restorationData.keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
+        : [];
 
-        <div>
-            <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-200 pb-4">
-                Smještaj i pohrana
-            </h3>
-            <div className="grid grid-cols-1 gap-y-5 gap-x-4">
-                <DetailItem label="Izvorna lokacija" value={content.location} />
-                <DetailItem label="Mjesto pohrane / Depo" value={content.storage} />
-            </div>
-        </div>
-    </div>
-);
+    const worksList = restorationData?.works || [];
+    const analysisList = restorationData?.typeOfAnalysis || [];
 
-const PdfSection = ({ pdfPath }: { pdfPath: string | null }) => {
+    return (
+        <div className="bg-white p-8 rounded-md shadow-sm border border-slate-300 flex flex-col gap-10">
+
+            {/* Analize */}
+            <div>
+                <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-200 pb-4">
+                    Analize
+                </h3>
+                {analysisList.length > 0 ? (
+                    <div className="flex flex-col gap-3">
+                        {/* Map your analysis items cleanly here */}
+                        {analysisList.map((analysis: any, index: number) => (
+                            <div key={index} className="p-4 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-800">
+                                {analysis.name || JSON.stringify(analysis)}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-slate-400 italic">Nema unesenih analiza.</p>
+                )}
+            </div>
+
+            {/* Provedeni radovi */}
+            <div>
+                <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-200 pb-4">
+                    Provedeni radovi
+                </h3>
+                {worksList.length > 0 ? (
+                    <div className="flex flex-col gap-4">
+                        {worksList.map((work: { name: string; material: string }, index: number) => (
+                            <div key={index} className="flex flex-col gap-2 p-4 rounded-md border border-slate-200 bg-slate-50">
+                                <p className="text-sm font-medium text-slate-800 leading-relaxed break-words">
+                                    {work.name}
+                                </p>
+                                <p className="text-sm text-slate-600 break-words border-t border-slate-200 pt-2 mt-1">
+                                    <span className="font-semibold text-slate-700">Korišteni materijal:</span> {work.material}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-slate-400 italic">Nema unesenih provedenih radova.</p>
+                )}
+            </div>
+
+            {/* Ključne riječi */}
+            <div>
+                <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-200 pb-4">
+                    Ključne riječi
+                </h3>
+                {keywordsList.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                        {keywordsList.map((keyword: string, index: number) => (
+                            <span
+                                key={index}
+                                className="bg-blue-50 text-blue-900 border border-blue-200 px-3 py-1 rounded-md text-xs font-semibold shadow-sm"
+                            >
+                                {keyword}
+                            </span>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-slate-400 italic">Nema ključnih riječi.</p>
+                )}
+            </div>
+
+            {/* Smještaj i pohrana */}
+            <div>
+                <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-200 pb-4">
+                    Smještaj i pohrana
+                </h3>
+                <div className="grid grid-cols-1 gap-y-5 gap-x-4">
+                    <DetailItem label="Izvorna lokacija / Zbirka" value={restorationData?.location} />
+                    <DetailItem label="Trenutni smještaj / Depo" value={restorationData?.storage} />
+                </div>
+            </div>
+
+        </div>
+    );
+};
+
+const PdfSection = ({ pdfPath }: { pdfPath: string | null | undefined }) => {
     if (!pdfPath) return null;
     return (
         <div>

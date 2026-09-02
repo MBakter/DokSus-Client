@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
-import {type Document } from '../types/Document';
-import type {UserProfile} from "../types/UserProfile.ts";
+import {type Document } from '../data/types/Document';
+import type {UserProfile} from "../data/types/UserProfile.ts";
 import {fetchSingleUserProfile} from "../api/feature/UserProfileApi.ts";
 import {fetchUserPublishedDocuments} from "../api/feature/DocumentApi.ts";
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";

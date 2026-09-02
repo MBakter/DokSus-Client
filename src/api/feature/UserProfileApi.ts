@@ -1,49 +1,53 @@
-import type {UserProfile} from "../../types/UserProfile.ts";
+import type {UserProfile} from "../../data/types/UserProfile.ts";
 import axiosClient from "../AxiosClient.ts";
-import {getToken} from "../../util/Utilities.ts";
 
-const fetchUserProfiles = async (emails: string[]): Promise<Record<string, UserProfile>> => {
+export const fetchUserProfiles = async (emails: string[]): Promise<Record<string, UserProfile>> => {
     if (emails.length === 0) return {};
 
-    const uniqueEmails = Array.from(new Set(emails));
-    const response = await axiosClient.get<UserProfile[]>('/users/profiles', {
-        params: { emails: uniqueEmails.join(',') }
-    });
+    try {
+        const uniqueEmails = Array.from(new Set(emails));
+        const response = await axiosClient.get<UserProfile[]>('/users/profiles', {
+            params: { emails: uniqueEmails.join(',') }
+        });
 
-    // Convert the array into a dictionary for O(1) lookup during mapping
-    const profileMap: Record<string, UserProfile> = {};
-    response.data.forEach(profile => {
-        profileMap[profile.email] = profile;
-    });
+        // Convert the array into a dictionary for O(1) lookup during mapping
+        const profileMap: Record<string, UserProfile> = {};
+        response.data.forEach(profile => {
+            profileMap[profile.email] = profile;
+        });
 
-    return profileMap;
+        return profileMap;
+    } catch (error) {
+        console.error("Error fetching user profiles:", error);
+        // Throw the error so the UI can catch it and show a toast/alert if necessary
+        throw error;
+    }
 };
 
 export const fetchSingleUserProfile = async (email: string): Promise<UserProfile | null> => {
-    const profiles = await fetchUserProfiles([email]);
-    return profiles[email] || null;
+    try {
+        const profiles = await fetchUserProfiles([email]);
+        return profiles[email] || null;
+    } catch (error) {
+        console.error(`Error fetching single user profile for ${email}:`, error);
+        // Return null instead of throwing, preventing UI crashes if a single profile fails to load
+        return null;
+    }
 };
 
 export const searchUsersByQuery = async (query: string): Promise<UserProfile[]> => {
-    if (!query || query.length < 2) return [];
+    // Added .trim() to prevent unnecessary API calls for whitespace
+    if (!query || query.trim().length < 2) return [];
 
-    const token = getToken();
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-    };
+    try {
+        const response = await axiosClient.get<UserProfile[]>('/users/search', {
+            params: { query: query.trim() } // Axios handles the URI encoding automatically
+        });
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        return response.data;
+    } catch (error) {
+        console.error("Error searching users by query:", error);
+        // Return an empty array so dropdowns/typeaheads fail gracefully
+        return [];
     }
-
-    const response = await fetch(`/api/users/search?query=${encodeURIComponent(query)}`, {
-        method: 'GET',
-        headers
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch users');
-    }
-
-    return await response.json();
 };

@@ -1,18 +1,9 @@
 import {useState, useEffect} from 'preact/hooks';
 import { route } from 'preact-router';
-import type {Document} from '../types/Document.ts';
+import type {Document} from '../data/types/Document.ts';
 import {fetchDocuments} from "../api/feature/DocumentApi.ts";
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
-
-const CATEGORIES = [
-    "DRVENI PREDMETI",
-    "SLIKE NA PLATNU",
-    "ZIDNE SLIKE",
-    "KAMENA I ARHITEKTONSKA PLASTIKA",
-    "OSTALI MATERIJALI",
-    "REFERENTNA ISTRAŽIVANJA",
-    "DIPLOMSKI I SEMINARSKI RADOVI"
-];
+import {type ReferenceCategory, useCategoryReference} from "../data/reference/ReferenceData.ts";
 
 interface HomeProps {
     url?: string; // Injected automatically by preact-router
@@ -22,8 +13,10 @@ export function Home({ url }: HomeProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [totalPages, setTotalPages] = useState<number>(1);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-
     const [isCategoriesOpen, setIsCategoriesOpen] = useState<boolean>(true);
+
+    // Load categories dynamically from the backend reference endpoint
+    const { categories } = useCategoryReference();
 
     // Parse the current state directly from the injected URL
     const searchParams = new URLSearchParams(url?.split('?')[1] || typeof window !== 'undefined' ? window.location.search : '');
@@ -42,7 +35,6 @@ export function Home({ url }: HomeProps) {
             const data = await fetchDocuments(page, category, search);
             setDocuments(data.content);
             setTotalPages(data.totalPages);
-            console.log("Loaded documents")
         } catch (error) {
             console.error("Failed to load documents", error);
         } finally {
@@ -50,13 +42,13 @@ export function Home({ url }: HomeProps) {
         }
     };
 
-    const handleCategoryClick = (category: string) => {
+    const handleCategoryClick = (categoryName: string) => {
         const params = new URLSearchParams(searchParams.toString());
 
-        if (selectedCategory === category) {
+        if (selectedCategory === categoryName) {
             params.delete('category');
         } else {
-            params.set('category', category);
+            params.set('category', categoryName);
             setIsCategoriesOpen(false);
         }
 
@@ -70,6 +62,12 @@ export function Home({ url }: HomeProps) {
         route(`/?${params.toString()}`);
     };
 
+    // Find the readable display name for the currently selected category header
+    const currentCategoryObj = categories.find((cat: ReferenceCategory) => cat.id === selectedCategory);
+    const categoryTitle = (selectedCategory && selectedCategory !== 'UNSPECIFIED' && currentCategoryObj)
+        ? currentCategoryObj.name
+        : "Sve Kategorije";
+
     return (
         <div className="w-full flex flex-col items-center">
 
@@ -81,7 +79,7 @@ export function Home({ url }: HomeProps) {
             >
                 <div className="flex-1 border-t border-blue-900 transition-colors group-hover:border-blue-600"></div>
                 <div className="px-4 text-gray-800 font-medium flex items-center gap-2 transition-colors group-hover:text-blue-600 select-none">
-                    <span>{selectedCategory ? selectedCategory : "Sve Kategorije"}</span>
+                    <span>{categoryTitle}</span>
                     <span
                         className={`text-xs transform transition-transform duration-300 ease-in-out ${isCategoriesOpen ? 'rotate-180' : 'rotate-0'}`}
                     >
@@ -99,22 +97,23 @@ export function Home({ url }: HomeProps) {
             >
                 <div className="overflow-hidden w-full flex flex-wrap justify-center gap-6">
                     <div className="flex flex-wrap justify-center gap-6 w-full pb-2 pt-2">
-                        {CATEGORIES.map((cat) => (
+                        {categories.map((category: ReferenceCategory) => (
                             <button
-                                key={cat}
+                                key={category.id}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    handleCategoryClick(cat);
+                                    handleCategoryClick(category.id);
                                 }}
-                                // Redesigned Category Buttons
                                 className={`w-48 h-40 flex items-center justify-center text-center p-4 border rounded-md shadow-sm transition-all duration-200
-                                    ${selectedCategory === cat
+                                    ${selectedCategory === category.id
                                     ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-700 text-blue-900 font-bold shadow-md'
                                     : 'border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:shadow hover:text-blue-800'
                                 }
                                 `}
                             >
-                                <span className="text-sm tracking-wide leading-relaxed">{cat}</span>
+                                <span className="text-sm tracking-wide leading-relaxed">
+                                    {category.id === 'UNSPECIFIED' ? "Sve kategorije" : category.name}
+                                </span>
                             </button>
                         ))}
                     </div>

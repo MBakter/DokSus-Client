@@ -6,8 +6,9 @@ import {Zoom} from "yet-another-react-lightbox/plugins";
 import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
 import type {useDocumentFiles} from "../useDocumentEditor.ts";
+import type {NamedFile, ServerNamedFile} from "../../../data/types/Document.ts";
 
-export function Attachments({ fileManager }: { fileManager: ReturnType<typeof useDocumentFiles> }) {
+export function Attachments({fileManager}: { fileManager: ReturnType<typeof useDocumentFiles> }) {
     return (
         <div className="flex flex-col gap-6">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Multimedija i prilozi</h2>
@@ -50,7 +51,7 @@ export function Attachments({ fileManager }: { fileManager: ReturnType<typeof us
     );
 }
 
-export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
+export function PdfSection({pdfFile, serverPdf, onChange, onRemove}: any) {
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
             <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">
@@ -67,17 +68,18 @@ export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
                             target="_blank"
                             className="flex items-center gap-2.5 text-base text-blue-700 font-medium hover:text-blue-900 transition-colors group"
                         >
-                            <IconPDF />
+                            <IconPDF/>
                             <span className="group-hover:underline">Preuzmi trenutni PDF</span>
-                            <IconDownload />
+                            <IconDownload/>
                         </a>
                     </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-4">
-                    <label className="cursor-pointer inline-flex items-center bg-white border border-slate-300 text-slate-700 font-medium text-base py-2.5 px-6 rounded-md hover:bg-slate-100 hover:border-slate-400 transition-colors shadow-sm">
+                    <label
+                        className="cursor-pointer inline-flex items-center bg-white border border-slate-300 text-slate-700 font-medium text-base py-2.5 px-6 rounded-md hover:bg-slate-100 hover:border-slate-400 transition-colors shadow-sm">
                         Odaberi PDF
-                        <input type="file" accept=".pdf" className="hidden" onChange={onChange} />
+                        <input type="file" accept=".pdf" className="hidden" onChange={onChange}/>
                     </label>
 
                     {(serverPdf || pdfFile) && (
@@ -92,8 +94,9 @@ export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
                 </div>
 
                 {pdfFile && (
-                    <div className="flex items-center gap-3 text-base text-emerald-800 font-medium bg-emerald-50 p-4 rounded-md border border-emerald-200">
-                        <IconCheck />
+                    <div
+                        className="flex items-center gap-3 text-base text-emerald-800 font-medium bg-emerald-50 p-4 rounded-md border border-emerald-200">
+                        <IconCheck/>
                         <span>Pripremljeno za prijenos: <span className="font-bold">{pdfFile.name}</span></span>
                     </div>
                 )}
@@ -102,7 +105,25 @@ export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
     );
 }
 
-export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpdateFileName, onUpdateServerPhotoName, onRemoveFile, onRemoveServerPhoto }: any) {
+interface PhotosSectionProps {
+    files: { projectPhotos: NamedFile[] };
+    serverPaths: { projectPhotos: ServerNamedFile[] };
+    onMultipleFilesChange: (e: Event) => void;
+    onUpdateFileName: (type: 'projectPhotos' | 'models3d', index: number, newName: string) => void;
+    onUpdateServerPhotoName: (index: number, newName: string) => void;
+    onRemoveFile: (type: 'projectPhotos' | 'models3d', index: number) => void;
+    onRemoveServerPhoto: (index: number) => void;
+}
+
+export function PhotosSection({
+                                  files,
+                                  serverPaths,
+                                  onMultipleFilesChange,
+                                  onUpdateFileName,
+                                  onUpdateServerPhotoName,
+                                  onRemoveFile,
+                                  onRemoveServerPhoto
+                              }: PhotosSectionProps) {
     const ITEMS_PER_PAGE = 3;
 
     const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -115,19 +136,26 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
 
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
-            <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Fotografije projekta</h2>
+            <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Fotografije
+                projekta</h2>
 
             {serverPaths.projectPhotos.length > 0 && (
                 <div className="flex flex-col mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <Lightbox open={lightboxIndex >= 0} close={() => setLightboxIndex(-1)} index={lightboxIndex} slides={lightboxSlides} plugins={[Zoom]} />
+                    <Lightbox open={lightboxIndex >= 0} close={() => setLightboxIndex(-1)} index={lightboxIndex}
+                              slides={lightboxSlides} plugins={[Zoom]}/>
 
                     <div className="overflow-hidden w-full mb-6">
-                        <div className="flex transition-transform duration-500 ease-in-out" style={{transform: `translateX(-${photoPage * 100}%)`}}>
+                        <div className="flex transition-transform duration-500 ease-in-out"
+                             style={{transform: `translateX(-${photoPage * 100}%)`}}>
                             {serverPaths.projectPhotos.map((photo: any, index: number) => (
                                 <div key={index} className="w-full md:w-1/3 flex-shrink-0 px-2">
-                                    <div className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden h-full">
-                                        <div className="relative group cursor-pointer aspect-[4/3] bg-black overflow-hidden" onClick={() => setLightboxIndex(index)}>
-                                            <img src={getDownloadUrl(photo.path)} alt="preview" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                                    <div
+                                        className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden h-full">
+                                        <div
+                                            className="relative group cursor-pointer aspect-[4/3] bg-black overflow-hidden"
+                                            onClick={() => setLightboxIndex(index)}>
+                                            <img src={getDownloadUrl(photo.path)} alt="preview"
+                                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"/>
                                         </div>
                                         <div className="p-2 border-t border-slate-200 flex-1 flex flex-col">
                                             <textarea
@@ -151,15 +179,19 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
 
                     {totalPages > 1 && (
                         <div className="flex items-center justify-center gap-6">
-                            <button onClick={() => setPhotoPage(p => Math.max(0, p - 1))} disabled={photoPage === 0} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors">
+                            <button onClick={() => setPhotoPage(p => Math.max(0, p - 1))} disabled={photoPage === 0}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors">
                                 <span className="text-xl font-bold">←</span>
                             </button>
                             <div className="flex gap-2">
                                 {Array.from({length: totalPages}).map((_, idx) => (
-                                    <div key={idx} onClick={() => setPhotoPage(idx)} className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-colors ${idx === photoPage ? 'bg-blue-600' : 'bg-slate-300 hover:bg-slate-400'}`} />
+                                    <div key={idx} onClick={() => setPhotoPage(idx)}
+                                         className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-colors ${idx === photoPage ? 'bg-blue-600' : 'bg-slate-300 hover:bg-slate-400'}`}/>
                                 ))}
                             </div>
-                            <button onClick={() => setPhotoPage(p => Math.min(totalPages - 1, p + 1))} disabled={photoPage === totalPages - 1} className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors">
+                            <button onClick={() => setPhotoPage(p => Math.min(totalPages - 1, p + 1))}
+                                    disabled={photoPage === totalPages - 1}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm transition-colors">
                                 <span className="text-xl font-bold">→</span>
                             </button>
                         </div>
@@ -169,7 +201,8 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
 
             {files.projectPhotos.map((item: any, index: number) => (
                 <div key={index} className="flex gap-4 mb-4 p-4 bg-blue-50 border border-blue-100 rounded-md">
-                    <img src={item.previewUrl} alt="preview" className="w-24 h-24 object-cover rounded border border-slate-300 shadow-sm"/>
+                    <img src={item.previewUrl} alt="preview"
+                         className="w-24 h-24 object-cover rounded border border-slate-300 shadow-sm"/>
                     <div className="flex-1 flex flex-col justify-between">
                         <textarea
                             value={item.name}
@@ -179,13 +212,16 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
                         />
                         <div className="flex justify-between items-end mt-1">
                             <span className="text-xs text-slate-500 truncate max-w-[200px]">{item.file.name}</span>
-                            <button onClick={() => onRemoveFile('projectPhotos', index)} className="text-red-500 hover:bg-red-100 text-sm px-3 py-1 rounded transition-colors font-medium">Ukloni</button>
+                            <button onClick={() => onRemoveFile('projectPhotos', index)}
+                                    className="text-red-500 hover:bg-red-100 text-sm px-3 py-1 rounded transition-colors font-medium">Ukloni
+                            </button>
                         </div>
                     </div>
                 </div>
             ))}
 
-            <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
+            <label
+                className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
                 + Dodaj nove fotografije
                 <input type="file" accept="image/*" multiple className="hidden" onChange={onMultipleFilesChange}/>
             </label>
@@ -193,12 +229,35 @@ export function PhotosSection({ files, serverPaths, onMultipleFilesChange, onUpd
     );
 }
 
-export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onUpdateFileName, onUpdateServerModelName, onRemoveFile, onRemoveServerModel }: any) {
+interface Models3DSectionProps {
+    files: { models3d: NamedFile[] };
+    serverPaths: { models3d: ServerNamedFile[] };
+    onMultipleFilesChange: (e: Event) => void;
+    onUpdateFileName: (type: 'projectPhotos' | 'models3d', index: number, newName: string) => void;
+    onUpdateServerModelName: (index: number, newName: string) => void;
+    onRemoveFile: (type: 'projectPhotos' | 'models3d', index: number) => void;
+    onRemoveServerModel: (index: number) => void;
+}
+
+type ModelEntry =
+    | { isServer: true; data: ServerNamedFile; index: number }
+    | { isServer: false; data: NamedFile; index: number };
+
+export function Models3DSection(
+    {
+        files,
+        serverPaths,
+        onMultipleFilesChange,
+        onUpdateFileName,
+        onUpdateServerModelName,
+        onRemoveFile,
+        onRemoveServerModel
+    }: Models3DSectionProps) {
     const [modelPage, setModelPage] = useState(0);
 
-    const allModels = [
-        ...serverPaths.models3d.map((m: any, i: number) => ({isServer: true, data: m, index: i})),
-        ...files.models3d.map((m: any, i: number) => ({isServer: false, data: m, index: i}))
+    const allModels: ModelEntry[] = [
+        ...serverPaths.models3d.map((m: ServerNamedFile, i: number) => ({isServer: true as const, data: m, index: i})),
+        ...files.models3d.map((m: NamedFile, i: number) => ({isServer: false as const, data: m, index: i}))
     ];
     const totalModels = allModels.length;
     const currentModel = allModels[modelPage];
@@ -216,7 +275,10 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
         return lowerCaseName.endsWith('.glb') || lowerCaseName.endsWith('.gltf');
     };
 
-    const currentModelFilename = currentModel ? (currentModel.isServer ? currentModel.data.path : currentModel.data.file.name) : '';
+    const currentModelFilename = currentModel
+        ? (currentModel.isServer ? currentModel.data.path : currentModel.data.file.name)
+        : '';
+
     const isModelSupported = isModelFormatSupported(currentModelFilename);
 
     return (
@@ -226,9 +288,11 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
             {totalModels > 0 && (
                 <div className="flex flex-col mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
 
-                    <div className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden mb-4">
+                    <div
+                        className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden mb-4">
 
-                        <div className="w-full h-[400px] bg-slate-200 relative flex items-center justify-center overflow-hidden">
+                        <div
+                            className="w-full h-[400px] bg-slate-200 relative flex items-center justify-center overflow-hidden">
                             {currentModel && (
                                 isModelSupported ? (
                                     <model-viewer
@@ -241,13 +305,16 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
                                             height: '100%',
                                             backgroundColor: '#f1f5f9',
                                             cursor: 'grab'
-                                        }}
+                                        } as any} // model-viewer styles occasionally need 'as any' in TS
                                     ></model-viewer>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center text-slate-500 w-full h-full text-center p-6">
+                                    <div
+                                        className="flex flex-col items-center justify-center text-slate-500 w-full h-full text-center p-6">
                                         <span className="text-4xl mb-3">🧊</span>
-                                        <p className="font-semibold text-lg text-slate-700">Format nije podržan za pregled</p>
-                                        <p className="text-sm mt-1">Samo .glb i .gltf formati mogu biti prikazani u pregledniku.</p>
+                                        <p className="font-semibold text-lg text-slate-700">Format nije podržan za
+                                            pregled</p>
+                                        <p className="text-sm mt-1">Samo .glb i .gltf formati mogu biti prikazani u
+                                            pregledniku.</p>
                                         <p className="text-xs mt-2 bg-white px-2 py-1 rounded border border-slate-300">
                                             {currentModelFilename.split('/').pop()}
                                         </p>
@@ -276,6 +343,7 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
                                     <div className="flex gap-4">
                                         {currentModel.isServer ? (
                                             <a href={getDownloadUrl(currentModel.data.path)} target="_blank"
+                                               rel="noreferrer"
                                                className="text-blue-700 hover:underline font-bold text-sm flex items-center gap-1">
                                                 <span>↓</span> Preuzmi datoteku
                                             </a>
@@ -332,7 +400,8 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
                 </div>
             )}
 
-            <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
+            <label
+                className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
                 + Dodaj nove modele
                 <input type="file" accept=".obj,.gltf,.glb" multiple className="hidden"
                        onChange={onMultipleFilesChange}/>
@@ -341,16 +410,32 @@ export function Models3DSection({ files, serverPaths, onMultipleFilesChange, onU
     );
 }
 
-export function VideoSection({ videoFile, serverVideo, onChange, onUpdateVideoName, onRemoveVideo }: any) {
+interface VideoSectionProps {
+    videoFile: NamedFile | null;
+    serverVideo: ServerNamedFile | null;
+    onChange: (e: Event) => void;
+    onUpdateVideoName: (newName: string, isServer: boolean) => void;
+    onRemoveVideo: (isServer: boolean) => void;
+}
+
+export function VideoSection({
+                                 videoFile,
+                                 serverVideo,
+                                 onChange,
+                                 onUpdateVideoName,
+                                 onRemoveVideo
+                             }: VideoSectionProps) {
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
             <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Videozapis</h2>
 
             {(serverVideo || videoFile) ? (
                 <div className="flex flex-col mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <div className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden mb-4">
+                    <div
+                        className="flex flex-col bg-white border border-slate-300 rounded shadow-sm overflow-hidden mb-4">
                         <div className="w-full bg-slate-200 relative flex items-center justify-center overflow-hidden">
-                            <video src={serverVideo ? getDownloadUrl(serverVideo.path) : videoFile!.previewUrl} controls className="w-full h-auto max-h-[450px] bg-black">
+                            <video src={serverVideo ? getDownloadUrl(serverVideo.path) : videoFile!.previewUrl} controls
+                                   className="w-full h-auto max-h-[450px] bg-black">
                                 Vaš preglednik ne podržava video element.
                             </video>
                         </div>
@@ -366,12 +451,15 @@ export function VideoSection({ videoFile, serverVideo, onChange, onUpdateVideoNa
                             <div className="flex justify-between items-center mt-2">
                                 <div className="flex gap-4">
                                     {serverVideo ? (
-                                        <a href={getDownloadUrl(serverVideo.path)} target="_blank" className="text-blue-700 hover:underline font-bold text-sm flex items-center gap-1"><span>↓</span> Preuzmi datoteku</a>
+                                        <a href={getDownloadUrl(serverVideo.path)} target="_blank" rel="noreferrer"
+                                           className="text-blue-700 hover:underline font-bold text-sm flex items-center gap-1"><span>↓</span> Preuzmi
+                                            datoteku</a>
                                     ) : (
                                         <span className="text-xs font-medium text-slate-500">Nova datoteka spremna za prijenos: {videoFile!.file.name}</span>
                                     )}
                                 </div>
-                                <button onClick={() => onRemoveVideo(!!serverVideo)} className="text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 font-bold px-4 py-1.5 rounded text-sm transition-all">
+                                <button onClick={() => onRemoveVideo(!!serverVideo)}
+                                        className="text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 font-bold px-4 py-1.5 rounded text-sm transition-all">
                                     Ukloni video
                                 </button>
                             </div>
@@ -379,10 +467,12 @@ export function VideoSection({ videoFile, serverVideo, onChange, onUpdateVideoNa
                     </div>
                 </div>
             ) : (
-                <div className="border-2 border-dashed border-slate-300 rounded-md p-8 bg-slate-50 flex flex-col items-center justify-center transition-colors hover:bg-slate-100">
-                    <IconVideo />
+                <div
+                    className="border-2 border-dashed border-slate-300 rounded-md p-8 bg-slate-50 flex flex-col items-center justify-center transition-colors hover:bg-slate-100">
+                    <IconVideo/>
                     <p className="text-sm text-slate-600 mb-4">Ovdje možete priložiti videozapis o projektu.</p>
-                    <label className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm">
+                    <label
+                        className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm">
                         Odaberi video
                         <input type="file" accept="video/*" className="hidden" onChange={onChange}/>
                     </label>

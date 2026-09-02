@@ -1,39 +1,78 @@
 import {useState, useEffect} from 'preact/hooks';
-import {Category, type RestorationData, Visibility} from "../../types/Document.ts";
+import {
+    type NamedFile,
+    type RestorationData,
+    type ServerNamedFile,
+    Visibility
+} from "../../data/types/Document.ts";
 import {
     createDocumentMetadata, deleteCover, deletePdf,
     fetchDocumentById, syncModels3d, syncProjectPhotos, syncVideo,
     updateDocumentMetadata, uploadCover, uploadModels3d, uploadPdf, uploadProjectPhotos, uploadVideo
 } from "../../api/feature/DocumentApi.ts";
-import type {UserProfile} from "../../types/UserProfile.ts";
+import type {UserProfile} from "../../data/types/UserProfile.ts";
 
-export interface NamedFile {
-    file: File;
-    name: string;
-    previewUrl: string;
-}
+/** todo
+ *   Required for all
+ *      - category
+ *      - name
+ *      - keywords (min. 3)
+ *   Required fields for the first 5 categories
+ *      - inventoryNumber
+ *      - author
+ *      - date
+ *      - material
+ *      - technique
+ *      - storage
+ */
+const REQUIRED_TEXT_FIELDS: (keyof RestorationData)[] = [
+    'category',
+    'inventoryNumber',
+    'name',
+    'author',
+    'date',
+    'material',
+    'technique',
+];
 
-export interface ServerNamedFile {
-    path: string;
-    name: string;
-}
-
-export const REQUIRED_RESTORATION_DATA_FIELDS: Array<keyof RestorationData> = [
-    'category', 'inventoryNumber', 'name', 'author', 'date',
+const REQUIRED_LIST_FIELDS: (keyof RestorationData)[] = [
+    'typeOfAnalysis',
+    'works'
 ];
 
 export const INITIAL_DATA: RestorationData = {
-    category: Category.UNSPECIFIED, inventoryNumber: '', name: '', author: '', date: '',
-    material: '', technique: '', keywords: '', location: '', storage: '', typeOfAnalysis: [], works: [],
-    pigment: '', binder: '', finishingLayer: ''
+    category: 'UNSPECIFIED',
+    inventoryNumber: '',
+    name: '',
+    group: '',
+    author: '',
+    date: '',
+    material: '',
+    technique: '',
+    keywords: '',
+    location: '',
+    storage: '',
+    typeOfAnalysis: [],
+    works: [],
+    pigment: '',
+    binder: '',
+    finishingLayer: ''
 };
 
 export function useDocumentForm() {
-    // 1. RESTORATION DATA (The actual content)
     const [restorationData, setRestorationData] = useState<RestorationData>(INITIAL_DATA);
     const [snapshot, setSnapshot] = useState<RestorationData>(INITIAL_DATA);
 
-    // 2. METADATA (The project settings)
+    const updateField = <K extends keyof RestorationData>(
+        field: K,
+        value: RestorationData[K] | ((prev: RestorationData[K]) => RestorationData[K])
+    ) => {
+        setRestorationData(prev => {
+            const nextValue = typeof value === 'function' ? (value as Function)(prev[field]) : value;
+            return { ...prev, [field]: nextValue };
+        });
+    };
+
     const [isPublished, setIsPublished] = useState(false);
     const [visibility, setVisibility] = useState<Visibility>(Visibility.OKIRU);
     const [initialVisibility, setInitialVisibility] = useState<Visibility>(Visibility.OKIRU);
@@ -41,21 +80,16 @@ export function useDocumentForm() {
     const [initialCoAuthors, setInitialCoAuthors] = useState<UserProfile[]>([]);
 
     const initializeForm = (document: any) => {
-        setRestorationData(document.content);
-        setSnapshot(document.content);
+        setRestorationData(document.restorationData);
+        setSnapshot(document.restorationData);
 
         setIsPublished(document.isPublished);
         setVisibility(document.visibility || Visibility.OKIRU);
         setInitialVisibility(document.visibility || Visibility.OKIRU);
 
-        const fetchedAuthors = document.coCreatorProfiles || [];
+        const fetchedAuthors = document.profiles?.coCreatorProfiles || [];
         setCoAuthors(fetchedAuthors);
         setInitialCoAuthors(fetchedAuthors);
-    };
-
-    const handleRestorationDataChange = (e: Event) => {
-        const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-        setRestorationData((prev: any) => ({...prev, [target.name]: target.value}));
     };
 
     const handleAddCoAuthor = (author: UserProfile) => setCoAuthors(prev => [...prev, author]);
@@ -67,11 +101,8 @@ export function useDocumentForm() {
     const hasChanges = hasRestorationDataChanges || hasVisibilityChange || hasCoAuthorsChanges;
 
     return {
-        // Domain 1: Restoration Data
         restorationData,
-        handleRestorationDataChange,
-
-        // Domain 2: Metadata
+        updateField,
         metadata: {
             isPublished,
             visibility,
@@ -81,8 +112,6 @@ export function useDocumentForm() {
             handleAddCoAuthor,
             handleRemoveCoAuthor
         },
-
-        // Orchestration
         initializeForm,
         hasChanges
     };
@@ -113,19 +142,24 @@ export function useDocumentFiles() {
     }>({cover: '', pdf: '', photos: [], models: [], video: null});
 
     const initializeFiles = (document: any) => {
-        const fetchedPhotos = document.projectPhotos || [];
-        const fetchedModels = document.models3d || [];
-        const fetchedVideo = document.video || null;
+        // Fallback to empty object if document.files is missing (e.g., old data)
+        const filesData = document.files || {};
+
+        const fetchedPhotos = filesData.projectPhotos || [];
+        const fetchedModels = filesData.models3d || [];
+        const fetchedVideo = filesData.video || null;
+
         setServerPaths({
-            cover: document.coverPath || '',
-            pdf: document.pdfPath || '',
+            cover: filesData.coverPath || '',
+            pdf: filesData.pdfPath || '',
             video: fetchedVideo,
             projectPhotos: fetchedPhotos,
             models3d: fetchedModels
         });
+
         setInitialServerState({
-            cover: document.coverPath || '',
-            pdf: document.pdfPath || '',
+            cover: filesData.coverPath || '',
+            pdf: filesData.pdfPath || '',
             photos: JSON.parse(JSON.stringify(fetchedPhotos)),
             models: JSON.parse(JSON.stringify(fetchedModels)),
             video: fetchedVideo ? JSON.parse(JSON.stringify(fetchedVideo)) : null
@@ -273,10 +307,25 @@ export function useDocumentEditor(id?: string) {
     };
 
     // Validation
-    const isFormFilled = REQUIRED_RESTORATION_DATA_FIELDS.every(field => {
-        const val = formManager.restorationData[field];
-        return typeof val === 'string' ? val.trim() !== '' : val !== Category.UNSPECIFIED;
+    const isTextValid = REQUIRED_TEXT_FIELDS.every(field => {
+        const val = formManager.restorationData[field] as unknown;
+
+        if (typeof val !== 'string') return false;
+
+        if (field === 'category') {
+            return val !== 'UNSPECIFIED' && val.trim() !== '';
+        }
+
+        return val.trim() !== '';
     });
+
+    const areListsValid = REQUIRED_LIST_FIELDS.every(field => {
+        const val = formManager.restorationData[field] as unknown;
+
+        return Array.isArray(val) && val.length > 0;
+    });
+
+    const isFormFilled = isTextValid && areListsValid;
 
     const isPublishable = isFormFilled && (fileManager.files.pdf !== null || fileManager.serverPaths.pdf !== '');
     const hasChanges = formManager.hasChanges || fileManager.hasAnyFileChanges;
@@ -391,7 +440,7 @@ export function useDocumentEditor(id?: string) {
 
         // Expose the perfectly separated namespaces to the UI
         restorationData: formManager.restorationData,
-        handleRestorationDataChange: formManager.handleRestorationDataChange,
+        handleRestorationDataChange: formManager.updateField,
         metadata: formManager.metadata,
         fileManager
     };

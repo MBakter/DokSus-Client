@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "preact/hooks";
-import type {UserProfile} from "../../../types/UserProfile.ts";
+import type {UserProfile} from "../../../data/types/UserProfile.ts";
 import {getDownloadUrl, getInitials} from "../../../util/Utilities.ts";
 import {
     IconGlobe, IconImageAdd, IconImageEdit, IconInstitution,
@@ -8,7 +8,7 @@ import {
     IconX
 } from "../../../assets/Icons.tsx";
 import {searchUsersByQuery} from "../../../api/feature/UserProfileApi.ts";
-import {Visibility} from "../../../types/Document.ts";
+import {Visibility} from "../../../data/types/Document.ts";
 
 interface CoverPhotoProps {
     coverFile: File | null;
