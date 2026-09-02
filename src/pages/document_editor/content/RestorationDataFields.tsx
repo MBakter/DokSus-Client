@@ -5,7 +5,7 @@ interface RestorationDataProps {
     onChange: (e: Event) => void;
 }
 
-export function RestorationDataGroup({ restorationData, handleRestorationDataChange }: any) {
+export function RestorationDataFields({ restorationData, handleRestorationDataChange }: any) {
     return (
         <div className="flex flex-col gap-6">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Podaci o predmetu i restauraciji</h2>
@@ -174,30 +174,31 @@ export function MaterialDetailsSection({ restorationData, onChange }: Restoratio
 }
 
 import { useState } from 'preact/hooks';
-import {IconX} from "../../../assets/Icons.tsx";
+import {IconPlus, IconX} from "../../../assets/Icons.tsx";
 
 export function KeywordsSection({ restorationData, onChange }: RestorationDataProps) {
     const [inputValue, setInputValue] = useState("");
 
-    // Convert the single comma-separated string into an array for UI rendering
     const tags = restorationData.keywords
         ? restorationData.keywords.split(',').map((t: string) => t.trim()).filter(Boolean)
         : [];
 
+    const handleAddTag = () => {
+        const newTag = inputValue.trim();
+
+        if (newTag && !tags.includes(newTag)) {
+            const newTagsList = [...tags, newTag];
+            onChange({
+                target: { name: 'keywords', value: newTagsList.join(', ') }
+            } as unknown as Event);
+        }
+        setInputValue("");
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const newTag = inputValue.trim();
-
-            if (newTag && !tags.includes(newTag)) {
-                const newTagsList = [...tags, newTag];
-
-                // Fire a synthetic event to update the parent hook's string value
-                onChange({
-                    target: { name: 'keywords', value: newTagsList.join(', ') }
-                } as unknown as Event);
-            }
-            setInputValue("");
+            handleAddTag();
         }
     };
 
@@ -215,30 +216,42 @@ export function KeywordsSection({ restorationData, onChange }: RestorationDataPr
             </h3>
 
             <div className="flex flex-col gap-3">
-                <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue((e.target as HTMLInputElement).value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Unesite ključnu riječ i pritisnite Enter..."
-                    className="border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all w-full"
-                />
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue((e.target as HTMLInputElement).value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Unesite ključnu riječ i pritisnite Enter..."
+                        className="flex-grow border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
+                    />
+
+                    <button
+                        type="button"
+                        onClick={handleAddTag}
+                        disabled={!inputValue.trim()}
+                        className="flex items-center justify-center bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-300 hover:border-blue-300 px-4 py-2.5 rounded-md transition-colors disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed shadow-sm"
+                        title="Dodaj ključnu riječ"
+                    >
+                        <IconPlus className="w-5 h-5" />
+                    </button>
+                </div>
 
                 {tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
-                        {tags.map((tag : string, index: number) => (
+                        {tags.map((tag: string, index: number) => (
                             <span
                                 key={index}
-                                className="flex items-center gap-2 bg-blue-50 text-blue-900 border border-blue-200 px-3 py-1.5 rounded-md text-sm font-semibold"
+                                className="flex items-center gap-2 bg-blue-50 text-blue-900 border border-blue-200 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm"
                             >
                                 {tag}
                                 <button
                                     type="button"
                                     onClick={() => removeTag(tag)}
-                                    className="text-blue-400 hover:text-red-600 focus:outline-none transition-colors"
+                                    className="text-blue-400 hover:text-red-600 focus:outline-none transition-colors flex items-center justify-center"
                                     title="Ukloni"
                                 >
-                                    <IconX/>
+                                    <IconX className="w-4 h-4" />
                                 </button>
                             </span>
                         ))}

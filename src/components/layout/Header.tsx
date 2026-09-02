@@ -26,7 +26,7 @@ export function AccountBanner() {
         <div className="flex items-center justify-between px-8 py-3 bg-slate-100 border-b border-slate-200">
             <nav className="flex items-center gap-6">
                 <a href="/novo" className="text-slate-600 font-medium text-base hover:text-blue-900 transition-colors flex items-center gap-1.5">
-                    <IconPlus /> Novi dokument
+                    <IconPlus className="w-5 h-5 text-inherit" /> Novi dokument
                 </a>
 
                 <a href="/racun" className="text-slate-600 font-medium text-base hover:text-blue-900 transition-colors">

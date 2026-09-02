@@ -24,7 +24,7 @@ interface CoAuthorsSectionProps {
     onRemoveAuthor: (email: string) => void;
 }
 
-export function ProjectSettingsGroup({ metadata, fileManager }: any) {
+export function ProjectSettings({ metadata, fileManager }: any) {
     return (
         <div className="flex flex-col gap-6">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Postavke projekta</h2>

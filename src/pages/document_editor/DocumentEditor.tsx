@@ -1,8 +1,8 @@
 import {useDocumentEditor} from "./useDocumentEditor.ts";
 import {useEffect, useState} from "preact/hooks";
-import {RestorationDataGroup,} from "./content/RestorationData.tsx";
-import {ProjectSettingsGroup} from "./content/ProjectSettings.tsx";
-import {AttachmentsSection} from "./content/Attachments.tsx";
+import {RestorationDataFields,} from "./content/RestorationDataFields.tsx";
+import {ProjectSettings} from "./content/ProjectSettings.tsx";
+import {Attachments} from "./content/Attachments.tsx";
 
 interface DocumentEditorProps {
     id?: string;
@@ -34,17 +34,17 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
 
             <div className="w-full max-w-5xl flex flex-col gap-10 px-4 lg:px-0 mt-6">
 
-                <ProjectSettingsGroup
+                <ProjectSettings
                     metadata={editor.metadata}
                     fileManager={editor.fileManager}
                 />
 
-                <RestorationDataGroup
+                <RestorationDataFields
                     restorationData={editor.restorationData}
                     handleRestorationDataChange={editor.handleRestorationDataChange}
                 />
 
-                <AttachmentsSection
+                <Attachments
                     fileManager={editor.fileManager}
                 />
             </div>

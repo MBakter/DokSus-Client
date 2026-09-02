@@ -7,7 +7,7 @@ import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
 import type {useDocumentFiles} from "../useDocumentEditor.ts";
 
-export function AttachmentsSection({ fileManager }: { fileManager: ReturnType<typeof useDocumentFiles> }) {
+export function Attachments({ fileManager }: { fileManager: ReturnType<typeof useDocumentFiles> }) {
     return (
         <div className="flex flex-col gap-6">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Multimedija i prilozi</h2>
