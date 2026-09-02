@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import {type DocumentContent, Visibility} from "../../types/Document.ts";
+import {useState, useEffect} from 'preact/hooks';
+import {Category, type RestorationData, Visibility} from "../../types/Document.ts";
 import {
     createDocumentMetadata, deleteCover, deletePdf,
     fetchDocumentById, syncModels3d, syncProjectPhotos, syncVideo,
@@ -18,154 +18,142 @@ export interface ServerNamedFile {
     name: string;
 }
 
-export const CATEGORIES = [
-    "",
-    "DRVENI PREDMETI", "SLIKE NA PLATNU", "ZIDNE SLIKE",
-    "KAMENA I ARHITEKTONSKA PLASTIKA", "OSTALI MATERIJALI",
-    "ISTRAŽIVAČKI RADOVI I REFERENTNI MATERIJALI", "DIPLOMSKI I SEMINARSKI RADOVI"
+export const REQUIRED_RESTORATION_DATA_FIELDS: Array<keyof RestorationData> = [
+    'category', 'inventoryNumber', 'name', 'author', 'date',
 ];
 
-export const REQUIRED_METADATA_FIELDS: Array<keyof DocumentContent> = [
-    'category', 'invNumber', 'name', 'author', 'date', 'student', 'professor'
-];
-
-const INITIAL_DATA: DocumentContent = {
-    category: '', invNumber: '', name: '', author: '', date: '', student: '', professor: '',
-    material: '', technique: '', pigment: '', binder: '', finishingLayer: '', materialsUsed: '',
-    typeOfAnalysis: '', goalOfAnalysis: '', works: '', keywords: '', location: '', storage: ''
+export const INITIAL_DATA: RestorationData = {
+    category: Category.UNSPECIFIED, inventoryNumber: '', name: '', author: '', date: '',
+    material: '', technique: '', keywords: '', location: '', storage: '', typeOfAnalysis: [], works: [],
+    pigment: '', binder: '', finishingLayer: ''
 };
 
-export function useDocumentEditor(id?: string) {
-    // --- Basic State ---
-    const [documentId, setDocumentId] = useState<string | null>(id || null);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isLoading, setIsLoading] = useState(!!id);
+export function useDocumentForm() {
+    // 1. RESTORATION DATA (The actual content)
+    const [restorationData, setRestorationData] = useState<RestorationData>(INITIAL_DATA);
+    const [snapshot, setSnapshot] = useState<RestorationData>(INITIAL_DATA);
 
-    // --- Form & Snapshot State ---
-    const [formData, setFormData] = useState<DocumentContent>(INITIAL_DATA);
-    const [snapshot, setSnapshot] = useState<DocumentContent>(INITIAL_DATA);
-
-    // --- Visibility & Publication State ---
+    // 2. METADATA (The project settings)
     const [isPublished, setIsPublished] = useState(false);
     const [visibility, setVisibility] = useState<Visibility>(Visibility.OKIRU);
     const [initialVisibility, setInitialVisibility] = useState<Visibility>(Visibility.OKIRU);
-
-    // --- Co-Authors ---
     const [coAuthors, setCoAuthors] = useState<UserProfile[]>([]);
     const [initialCoAuthors, setInitialCoAuthors] = useState<UserProfile[]>([]);
 
-    // --- Local Files State ---
+    const initializeForm = (document: any) => {
+        setRestorationData(document.content);
+        setSnapshot(document.content);
+
+        setIsPublished(document.isPublished);
+        setVisibility(document.visibility || Visibility.OKIRU);
+        setInitialVisibility(document.visibility || Visibility.OKIRU);
+
+        const fetchedAuthors = document.coCreatorProfiles || [];
+        setCoAuthors(fetchedAuthors);
+        setInitialCoAuthors(fetchedAuthors);
+    };
+
+    const handleRestorationDataChange = (e: Event) => {
+        const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+        setRestorationData((prev: any) => ({...prev, [target.name]: target.value}));
+    };
+
+    const handleAddCoAuthor = (author: UserProfile) => setCoAuthors(prev => [...prev, author]);
+    const handleRemoveCoAuthor = (email: string) => setCoAuthors(prev => prev.filter(a => a.email !== email));
+
+    const hasRestorationDataChanges = JSON.stringify(restorationData) !== JSON.stringify(snapshot);
+    const hasVisibilityChange = visibility !== initialVisibility;
+    const hasCoAuthorsChanges = JSON.stringify(coAuthors) !== JSON.stringify(initialCoAuthors);
+    const hasChanges = hasRestorationDataChanges || hasVisibilityChange || hasCoAuthorsChanges;
+
+    return {
+        // Domain 1: Restoration Data
+        restorationData,
+        handleRestorationDataChange,
+
+        // Domain 2: Metadata
+        metadata: {
+            isPublished,
+            visibility,
+            coAuthors,
+            setVisibility,
+            setIsPublished,
+            handleAddCoAuthor,
+            handleRemoveCoAuthor
+        },
+
+        // Orchestration
+        initializeForm,
+        hasChanges
+    };
+}
+
+export function useDocumentFiles() {
     const [files, setFiles] = useState<{
         cover: File | null;
         pdf: File | null;
         video: NamedFile | null;
         projectPhotos: NamedFile[];
         models3d: NamedFile[];
-    }>({
-        cover: null, pdf: null, video: null, projectPhotos: [], models3d: []
-    });
-
+    }>({cover: null, pdf: null, video: null, projectPhotos: [], models3d: []});
     const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
-
-    // --- Server Files State ---
     const [serverPaths, setServerPaths] = useState<{
         cover: string;
         pdf: string;
         video: ServerNamedFile | null;
         projectPhotos: ServerNamedFile[];
         models3d: ServerNamedFile[];
-    }>({
-        cover: '', pdf: '', video: null, projectPhotos: [], models3d: []
-    });
-
-    // Tracks initial state so we know if something was deleted
+    }>({cover: '', pdf: '', video: null, projectPhotos: [], models3d: []});
     const [initialServerState, setInitialServerState] = useState<{
         cover: string;
         pdf: string;
         photos: ServerNamedFile[];
         models: ServerNamedFile[];
         video: ServerNamedFile | null;
-    }>({
-        cover: '', pdf: '', photos: [], models: [], video: null
-    });
+    }>({cover: '', pdf: '', photos: [], models: [], video: null});
 
-    // --- Data Fetching ---
-    useEffect(() => {
-        if (id) {
-            loadExistingDocument(id);
-        }
-    }, [id]);
-
-    const loadExistingDocument = async (docId: string) => {
-        setIsLoading(true);
-        try {
-            const document = await fetchDocumentById(docId);
-            setFormData(document.content);
-            setSnapshot(document.content);
-
-            // Set root-level properties
-            setIsPublished(document.isPublished);
-            setVisibility(document.visibility || Visibility.OKIRU);
-            setInitialVisibility(document.visibility || Visibility.OKIRU);
-
-            const fetchedAuthors = (document as any).authorProfiles || [];
-            const fetchedPhotos = (document as any).projectPhotos || [];
-            const fetchedModels = (document as any).models3d || [];
-            const fetchedVideo = (document as any).video || null;
-
-            setCoAuthors(fetchedAuthors);
-            setInitialCoAuthors(fetchedAuthors);
-
-            setServerPaths({
-                cover: document.coverPath || '',
-                pdf: document.pdfPath || '',
-                video: fetchedVideo,
-                projectPhotos: fetchedPhotos,
-                models3d: fetchedModels
-            });
-
-            setInitialServerState({
-                cover: document.coverPath || '',
-                pdf: document.pdfPath || '',
-                photos: JSON.parse(JSON.stringify(fetchedPhotos)),
-                models: JSON.parse(JSON.stringify(fetchedModels)),
-                video: fetchedVideo ? JSON.parse(JSON.stringify(fetchedVideo)) : null
-            });
-        } catch (error) {
-            console.error("Failed to load document", error);
-        } finally {
-            setIsLoading(false);
-        }
+    const initializeFiles = (document: any) => {
+        const fetchedPhotos = document.projectPhotos || [];
+        const fetchedModels = document.models3d || [];
+        const fetchedVideo = document.video || null;
+        setServerPaths({
+            cover: document.coverPath || '',
+            pdf: document.pdfPath || '',
+            video: fetchedVideo,
+            projectPhotos: fetchedPhotos,
+            models3d: fetchedModels
+        });
+        setInitialServerState({
+            cover: document.coverPath || '',
+            pdf: document.pdfPath || '',
+            photos: JSON.parse(JSON.stringify(fetchedPhotos)),
+            models: JSON.parse(JSON.stringify(fetchedModels)),
+            video: fetchedVideo ? JSON.parse(JSON.stringify(fetchedVideo)) : null
+        });
     };
 
-    const handleAddCoAuthor = (author: UserProfile) => {
-        setCoAuthors(prev => [...prev, author]);
-    };
-
-    const handleRemoveCoAuthor = (email: string) => {
-        setCoAuthors(prev => prev.filter(a => a.email !== email));
-    };
-
-    // --- Input Handlers ---
-    const handleInputChange = (e: Event) => {
-        const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-        setFormData((prev: any) => ({ ...prev, [target.name]: target.value }));
+    const resetLocalFiles = () => {
+        setFiles({cover: null, pdf: null, video: null, projectPhotos: [], models3d: []});
+        setCoverPreviewUrl(null);
     };
 
     const handleSingleFileChange = (type: 'cover' | 'pdf' | 'video') => (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
             const selectedFile = target.files[0];
-
             if (type === 'cover') {
-                setFiles(prev => ({ ...prev, cover: selectedFile }));
+                setFiles(prev => ({...prev, cover: selectedFile}));
                 setCoverPreviewUrl(URL.createObjectURL(selectedFile));
             } else if (type === 'pdf') {
-                setFiles(prev => ({ ...prev, pdf: selectedFile }));
+                setFiles(prev => ({...prev, pdf: selectedFile}));
             } else if (type === 'video') {
                 setFiles(prev => ({
                     ...prev,
-                    video: { file: selectedFile, name: selectedFile.name.split('.')[0], previewUrl: URL.createObjectURL(selectedFile) }
+                    video: {
+                        file: selectedFile,
+                        name: selectedFile.name.split('.')[0],
+                        previewUrl: URL.createObjectURL(selectedFile)
+                    }
                 }));
             }
         }
@@ -179,110 +167,125 @@ export function useDocumentEditor(id?: string) {
                 name: file.name.split('.')[0],
                 previewUrl: URL.createObjectURL(file)
             }));
-            setFiles(prev => ({ ...prev, [type]: [...prev[type], ...newFiles] }));
+            setFiles(prev => ({...prev, [type]: [...prev[type], ...newFiles]}));
         }
         target.value = '';
     };
 
-    // --- Rename Handlers ---
-    const handleUpdateFileName = (type: 'projectPhotos' | 'models3d', index: number, newName: string) => {
-        setFiles(prev => {
-            const updated = [...prev[type]];
-            updated[index].name = newName;
-            return { ...prev, [type]: updated };
-        });
-    };
-
-    const handleUpdateServerPhotoName = (index: number, newName: string) => {
-        setServerPaths(prev => {
-            const updated = [...prev.projectPhotos];
-            updated[index].name = newName;
-            return { ...prev, projectPhotos: updated };
-        });
-    };
-
-    const handleUpdateServerModelName = (index: number, newName: string) => {
-        setServerPaths(prev => {
-            const updated = [...prev.models3d];
-            updated[index].name = newName;
-            return { ...prev, models3d: updated };
-        });
-    };
-
+    const handleUpdateFileName = (type: 'projectPhotos' | 'models3d', index: number, newName: string) => setFiles(prev => {
+        const updated = [...prev[type]];
+        updated[index].name = newName;
+        return {...prev, [type]: updated};
+    });
+    const handleUpdateServerPhotoName = (index: number, newName: string) => setServerPaths(prev => {
+        const updated = [...prev.projectPhotos];
+        updated[index].name = newName;
+        return {...prev, projectPhotos: updated};
+    });
+    const handleUpdateServerModelName = (index: number, newName: string) => setServerPaths(prev => {
+        const updated = [...prev.models3d];
+        updated[index].name = newName;
+        return {...prev, models3d: updated};
+    });
     const handleUpdateVideoName = (newName: string, isServer: boolean) => {
-        if (isServer && serverPaths.video) {
-            setServerPaths(prev => ({ ...prev, video: { ...prev.video!, name: newName } }));
-        } else if (!isServer && files.video) {
-            setFiles(prev => ({ ...prev, video: { ...prev.video!, name: newName } }));
-        }
+        if (isServer && serverPaths.video) setServerPaths(prev => ({
+            ...prev,
+            video: {...prev.video!, name: newName}
+        })); else if (!isServer && files.video) setFiles(prev => ({...prev, video: {...prev.video!, name: newName}}));
     };
 
-    // --- Remove handlers ---
     const handleRemoveCover = () => {
-        setFiles(prev => ({ ...prev, cover: null }));
+        setFiles(prev => ({...prev, cover: null}));
         setCoverPreviewUrl(null);
-        setServerPaths(prev => ({ ...prev, cover: '' }));
+        setServerPaths(prev => ({...prev, cover: ''}));
     };
     const handleRemovePdf = () => {
-        setFiles(prev => ({ ...prev, pdf: null }));
-        setServerPaths(prev => ({ ...prev, pdf: '' }));
+        setFiles(prev => ({...prev, pdf: null}));
+        setServerPaths(prev => ({...prev, pdf: ''}));
     };
-    const handleRemoveFile = (type: 'projectPhotos' | 'models3d', index: number) => {
-        setFiles(prev => {
-            const updated = [...prev[type]];
-            if (updated[index].previewUrl) URL.revokeObjectURL(updated[index].previewUrl);
-            updated.splice(index, 1);
-            return { ...prev, [type]: updated };
-        });
-    };
-    const handleRemoveServerPhoto = (index: number) => {
-        setServerPaths(prev => {
-            const updated = [...prev.projectPhotos];
-            updated.splice(index, 1);
-            return { ...prev, projectPhotos: updated };
-        });
-    };
-    const handleRemoveServerModel = (index: number) => {
-        setServerPaths(prev => {
-            const updated = [...prev.models3d];
-            updated.splice(index, 1);
-            return { ...prev, models3d: updated };
-        });
-    };
-
+    const handleRemoveFile = (type: 'projectPhotos' | 'models3d', index: number) => setFiles(prev => {
+        const updated = [...prev[type]];
+        if (updated[index].previewUrl) URL.revokeObjectURL(updated[index].previewUrl);
+        updated.splice(index, 1);
+        return {...prev, [type]: updated};
+    });
+    const handleRemoveServerPhoto = (index: number) => setServerPaths(prev => {
+        const updated = [...prev.projectPhotos];
+        updated.splice(index, 1);
+        return {...prev, projectPhotos: updated};
+    });
+    const handleRemoveServerModel = (index: number) => setServerPaths(prev => {
+        const updated = [...prev.models3d];
+        updated.splice(index, 1);
+        return {...prev, models3d: updated};
+    });
     const handleRemoveVideo = (isServer: boolean) => {
         if (isServer) {
-            setServerPaths(prev => ({ ...prev, video: null }));
+            setServerPaths(prev => ({...prev, video: null}));
         } else {
             if (files.video?.previewUrl) URL.revokeObjectURL(files.video.previewUrl);
-            setFiles(prev => ({ ...prev, video: null }));
+            setFiles(prev => ({...prev, video: null}));
         }
     };
 
-    // --- Validation & Change Detection ---
-    const isFormFilled = REQUIRED_METADATA_FIELDS.every(field => formData[field].trim() !== '');
-    const isPublishable = isFormFilled && (files.pdf !== null || serverPaths.pdf !== '');
-
-    const hasTextChanges = JSON.stringify(formData) !== JSON.stringify(snapshot);
-    const hasVisibilityChange = visibility !== initialVisibility;
     const hasServerPhotoChanges = JSON.stringify(serverPaths.projectPhotos) !== JSON.stringify(initialServerState.photos);
     const hasServerModelChanges = JSON.stringify(serverPaths.models3d) !== JSON.stringify(initialServerState.models);
     const hasServerVideoChanges = JSON.stringify(serverPaths.video) !== JSON.stringify(initialServerState.video);
     const hasServerCoverChanges = serverPaths.cover !== initialServerState.cover;
     const hasServerPdfChanges = serverPaths.pdf !== initialServerState.pdf;
-    const hasCoAuthorsChanges = JSON.stringify(coAuthors) !== JSON.stringify(initialCoAuthors);
-    const hasFileChanges = files.cover !== null || files.pdf !== null || files.video !== null || files.projectPhotos.length > 0 || files.models3d.length > 0;
+    const hasLocalFileChanges = files.cover !== null || files.pdf !== null || files.video !== null || files.projectPhotos.length > 0 || files.models3d.length > 0;
+    const hasAnyFileChanges = hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerCoverChanges || hasServerPdfChanges || hasLocalFileChanges;
 
-    // Check if ANYTHING has been modified
-    const hasChanges = hasTextChanges || hasVisibilityChange || hasCoAuthorsChanges || hasFileChanges || hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerCoverChanges || hasServerPdfChanges;
+    return {
+        files, serverPaths, initialServerState, coverPreviewUrl,
+        handleSingleFileChange, handleMultipleFilesChange, handleUpdateFileName, handleUpdateServerPhotoName,
+        handleUpdateServerModelName, handleUpdateVideoName, handleRemoveFile, handleRemoveServerModel,
+        handleRemoveVideo, handleRemoveCover, handleRemovePdf, handleRemoveServerPhoto,
+        initializeFiles, resetLocalFiles, hasAnyFileChanges,
+        hasServerPhotoChanges, hasServerModelChanges, hasServerVideoChanges, hasServerCoverChanges, hasServerPdfChanges
+    };
+}
+
+export function useDocumentEditor(id?: string) {
+    const [documentId, setDocumentId] = useState<string | null>(id || null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(!!id);
+
+    // Mount sub-hooks
+    const formManager = useDocumentForm();
+    const fileManager = useDocumentFiles();
+
+    useEffect(() => {
+        if (id) loadExistingDocument(id);
+    }, [id]);
+
+    const loadExistingDocument = async (docId: string) => {
+        setIsLoading(true);
+        try {
+            const document = await fetchDocumentById(docId);
+            formManager.initializeForm(document);
+            fileManager.initializeFiles(document);
+        } catch (error) {
+            console.error("Failed to load document", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Validation
+    const isFormFilled = REQUIRED_RESTORATION_DATA_FIELDS.every(field => {
+        const val = formManager.restorationData[field];
+        return typeof val === 'string' ? val.trim() !== '' : val !== Category.UNSPECIFIED;
+    });
+
+    const isPublishable = isFormFilled && (fileManager.files.pdf !== null || fileManager.serverPaths.pdf !== '');
+    const hasChanges = formManager.hasChanges || fileManager.hasAnyFileChanges;
 
     const handleSave = async (publish: boolean) => {
         setIsSaving(true);
         const failedTasks: string[] = [];
-
         let currentDocId = documentId;
 
-        // Helper to catch individual file errors without breaking the whole process
         const safeTask = (promise: Promise<any>, taskName: string) => {
             return promise.catch((err) => {
                 console.error(`Task failed: ${taskName}`, err);
@@ -291,11 +294,12 @@ export function useDocumentEditor(id?: string) {
         };
 
         try {
+            // Unpack the cleanly separated states into the payload
             const metadataPayload = {
-                content: formData,
+                content: formManager.restorationData,
                 isPublished: publish,
-                visibility: visibility,
-                coAuthorEmails: coAuthors.map(a => a.email)
+                visibility: formManager.metadata.visibility,
+                coCreatorEmails: formManager.metadata.coAuthors.map(a => a.email)
             };
 
             if (!currentDocId) {
@@ -307,75 +311,57 @@ export function useDocumentEditor(id?: string) {
                 await updateDocumentMetadata(currentDocId, metadataPayload);
             }
 
-            if (!currentDocId) {
-                throw new Error("Neuspješno dohvaćanje ID-a dokumenta.");
-            }
+            if (!currentDocId) throw new Error("Neuspješno dohvaćanje ID-a dokumenta.");
 
-            // CONCURRENT FILE OPERATIONS
+            // CONCURRENT FILES
             const fileTasks: Promise<void>[] = [];
 
-            // --- Cover ---
-            if (files.cover) {
-                fileTasks.push(safeTask(uploadCover(currentDocId, files.cover), "Spremanje naslovne fotografije"));
-            } else if (hasServerCoverChanges && !serverPaths.cover) {
+            if (fileManager.files.cover) {
+                fileTasks.push(safeTask(uploadCover(currentDocId, fileManager.files.cover), "Spremanje naslovne fotografije"));
+            } else if (fileManager.hasServerCoverChanges && !fileManager.serverPaths.cover) {
                 fileTasks.push(safeTask(deleteCover(currentDocId), "Brisanje naslovne fotografije"));
             }
 
-            // --- PDF ---
-            if (files.pdf) {
-                fileTasks.push(safeTask(uploadPdf(currentDocId, files.pdf), "Spremanje PDF dokumenta"));
-            } else if (hasServerPdfChanges && !serverPaths.pdf) {
+            if (fileManager.files.pdf) {
+                fileTasks.push(safeTask(uploadPdf(currentDocId, fileManager.files.pdf), "Spremanje PDF dokumenta"));
+            } else if (fileManager.hasServerPdfChanges && !fileManager.serverPaths.pdf) {
                 fileTasks.push(safeTask(deletePdf(currentDocId), "Brisanje PDF dokumenta"));
             }
 
-            // --- Video ---
-            if (files.video) {
-                fileTasks.push(safeTask(uploadVideo(currentDocId, files.video.file, files.video.name), "Spremanje videa"));
-            } else if (!serverPaths.video && initialServerState.video) {
-                // Passed RAW - API file handles the wrapping
+            if (fileManager.files.video) {
+                fileTasks.push(safeTask(uploadVideo(currentDocId, fileManager.files.video.file, fileManager.files.video.name), "Spremanje videa"));
+            } else if (!fileManager.serverPaths.video && fileManager.initialServerState.video) {
                 fileTasks.push(safeTask(syncVideo(currentDocId, null), "Brisanje videa"));
-            } else if (serverPaths.video && hasServerVideoChanges) {
-                // Passed RAW - API file handles the wrapping
-                fileTasks.push(safeTask(syncVideo(currentDocId, serverPaths.video), "Preimenovanje videa"));
+            } else if (fileManager.serverPaths.video && fileManager.hasServerVideoChanges) {
+                fileTasks.push(safeTask(syncVideo(currentDocId, fileManager.serverPaths.video), "Preimenovanje videa"));
             }
 
-            // --- Photos ---
-            if (hasServerPhotoChanges) {
-                fileTasks.push(safeTask(syncProjectPhotos(currentDocId, serverPaths.projectPhotos), "Ažuriranje postojećih fotografija"));
+            if (fileManager.hasServerPhotoChanges) {
+                fileTasks.push(safeTask(syncProjectPhotos(currentDocId, fileManager.serverPaths.projectPhotos), "Ažuriranje postojećih fotografija"));
             }
-            if (files.projectPhotos.length > 0) {
-                const photoFiles = files.projectPhotos.map(p => p.file);
-                const photoNames = files.projectPhotos.map(p => p.name);
-                fileTasks.push(safeTask(uploadProjectPhotos(currentDocId, photoFiles, photoNames), "Prijenos novih fotografija"));
+            if (fileManager.files.projectPhotos.length > 0) {
+                fileTasks.push(safeTask(uploadProjectPhotos(currentDocId, fileManager.files.projectPhotos.map(p => p.file), fileManager.files.projectPhotos.map(p => p.name)), "Prijenos novih fotografija"));
             }
 
-            // --- Models ---
-            if (hasServerModelChanges) {
-                fileTasks.push(safeTask(syncModels3d(currentDocId, serverPaths.models3d), "Ažuriranje postojećih 3D modela"));
+            if (fileManager.hasServerModelChanges) {
+                fileTasks.push(safeTask(syncModels3d(currentDocId, fileManager.serverPaths.models3d), "Ažuriranje postojećih 3D modela"));
             }
-            if (files.models3d.length > 0) {
-                const modelFiles = files.models3d.map(m => m.file);
-                const modelNames = files.models3d.map(m => m.name);
-                fileTasks.push(safeTask(uploadModels3d(currentDocId, modelFiles, modelNames), "Prijenos novih 3D modela"));
+            if (fileManager.files.models3d.length > 0) {
+                fileTasks.push(safeTask(uploadModels3d(currentDocId, fileManager.files.models3d.map(m => m.file), fileManager.files.models3d.map(m => m.name)), "Prijenos novih 3D modela"));
             }
 
-            // Execute all file operations concurrently
-            if (fileTasks.length > 0) {
-                await Promise.all(fileTasks);
-            }
+            if (fileTasks.length > 0) await Promise.all(fileTasks);
 
-            // EVALUATION
             if (failedTasks.length > 0) {
                 alert(`Spremljeno s greškama. Sljedeće operacije nisu uspjele:\n\n- ${failedTasks.join('\n- ')}\n\nMolimo pokušajte ponovno dodati ove datoteke.`);
-                setIsPublished(publish);
+                formManager.metadata.setIsPublished(publish);
             } else {
-                setIsPublished(publish);
+                formManager.metadata.setIsPublished(publish);
                 if (publish) {
                     window.location.href = '/racun';
                     return;
                 }
             }
-
         } catch (error) {
             console.error("Critical metadata save failure:", error);
             alert("Dogodila se greška prilikom spremanja projekta. Provjerite internetsku vezu i pokušajte ponovno.");
@@ -385,12 +371,8 @@ export function useDocumentEditor(id?: string) {
 
         try {
             if (currentDocId) {
-                // Calling this inherently resets `hasChanges` to false by updating snapshot & initialServerState
                 await loadExistingDocument(currentDocId);
-
-                // Clear local staging
-                setFiles({ cover: null, pdf: null, video: null, projectPhotos: [], models3d: [] });
-                setCoverPreviewUrl(null);
+                fileManager.resetLocalFiles();
             }
         } catch (resyncError) {
             console.error("Failed to resync state after save", resyncError);
@@ -400,11 +382,17 @@ export function useDocumentEditor(id?: string) {
     };
 
     return {
-        documentId, isSaving, isLoading, isPublished, formData, files, serverPaths, coverPreviewUrl,
-        isPublishable, hasChanges, visibility, coAuthors,
-        setVisibility, handleAddCoAuthor, handleRemoveCoAuthor, handleInputChange, handleSingleFileChange, handleMultipleFilesChange,
-        handleUpdateFileName, handleUpdateServerPhotoName, handleUpdateServerModelName, handleUpdateVideoName,
-        handleRemoveFile, handleRemoveServerModel, handleRemoveVideo, handleRemoveCover, handleRemovePdf, handleRemoveServerPhoto,
+        documentId,
+        isSaving,
+        isLoading,
+        isPublishable,
+        hasChanges,
         handleSave,
+
+        // Expose the perfectly separated namespaces to the UI
+        restorationData: formManager.restorationData,
+        handleRestorationDataChange: formManager.handleRestorationDataChange,
+        metadata: formManager.metadata,
+        fileManager
     };
 }

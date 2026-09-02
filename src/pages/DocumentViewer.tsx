@@ -10,9 +10,7 @@ import {
     IconCalendar,
     IconCube,
     IconImagePlaceholder,
-    IconMentor,
     IconPDF,
-    IconStudent,
     IconUser
 } from "../assets/Icons.tsx";
 
@@ -157,24 +155,6 @@ const HeroSection = ({ content, coverPath, profiles, ownerEmail }: { content: an
                             <div>
                                 <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Autor / Umjetnik</p>
                                 <p className="text-base font-medium text-slate-900 break-words">{content.author}</p>
-                            </div>
-                        </div>
-                    )}
-                    {content.student && (
-                        <div className="flex items-start gap-4">
-                            <div className="text-slate-400 mt-0.5"><IconStudent /></div>
-                            <div>
-                                <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Student (Izvođač)</p>
-                                <p className="text-base font-medium text-slate-900 break-words">{content.student}</p>
-                            </div>
-                        </div>
-                    )}
-                    {content.professor && (
-                        <div className="flex items-start gap-4">
-                            <div className="text-slate-400 mt-0.5"><IconMentor /></div>
-                            <div>
-                                <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0.5">Mentor</p>
-                                <p className="text-base font-medium text-slate-900 break-words">{content.professor}</p>
                             </div>
                         </div>
                     )}
