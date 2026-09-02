@@ -42,6 +42,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 <RestorationDataFields
                     restorationData={editor.restorationData}
                     handleRestorationDataChange={editor.handleRestorationDataChange}
+                    checkRequired={editor.checkIsFieldRequired}
                 />
 
                 <Attachments
@@ -74,16 +75,23 @@ export function TopActionBar({ documentId, isSaving, hasChanges, onSave, isPubli
         <div className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-200 py-3 shadow-sm mb-6 flex justify-center">
             <div className="w-full max-w-5xl flex items-center justify-between px-4 lg:px-0">
 
-                {/* Title & Status Badge */}
-                <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                        {documentId ? 'Uređivanje dokumenta' : 'Novi dokument'}
-                    </h1>
-                    {isPublished && (
-                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded uppercase tracking-wider border border-emerald-300 shadow-sm">
-                            Objavljeno
-                        </span>
-                    )}
+                {/* Title & Status Badge & Asterisk Legend */}
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                            {documentId ? 'Uređivanje dokumenta' : 'Novi dokument'}
+                        </h1>
+                        {isPublished && (
+                            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded uppercase tracking-wider border border-emerald-300 shadow-sm">
+                                Objavljeno
+                            </span>
+                        )}
+                    </div>
+                    {/* Persistent Required Fields Sign */}
+                    <p className="text-xs text-slate-500 font-medium">
+                        <span className="text-red-500 font-bold text-sm mr-1">*</span>
+                        Označava polja obavezna za objavu dokumenta
+                    </p>
                 </div>
 
                 {/* Actions */}
@@ -99,7 +107,6 @@ export function TopActionBar({ documentId, isSaving, hasChanges, onSave, isPubli
 
                         <button
                             onClick={handleDraftClick}
-                            // If published, they can always unpublish. If draft, they need changes to save.
                             disabled={isSaving || (!isPublished && !hasChanges)}
                             className="px-5 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -108,18 +115,17 @@ export function TopActionBar({ documentId, isSaving, hasChanges, onSave, isPubli
 
                         <button
                             onClick={handlePublishClick}
-                            // If published, disabled if no changes. If draft, disabled if not publishable.
-                            disabled={isSaving || (isPublished ? !hasChanges : !isPublishable)}
+                            // FIX: Disabled if saving, OR if it's missing requirements, OR if it's published but has no changes
+                            disabled={isSaving || !isPublishable || (isPublished && !hasChanges)}
                             className="px-6 py-2 bg-blue-900 text-white font-bold tracking-wide rounded hover:bg-blue-800 disabled:opacity-50 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all shadow-sm"
                         >
                             {isPublished ? 'Spremi promjene' : 'Objavi dokument'}
                         </button>
                     </div>
 
-                    {/* Helper text only shows if it's a draft and missing requirements */}
-                    {!isPublishable && !isPublished && (
-                        <span className="text-[10px] text-slate-500 font-medium mt-1">
-                            * Za objavu su obavezni metapodaci i PDF dokument.
+                    {!isPublishable && (
+                        <span className="text-[10px] text-red-600 font-bold mt-1">
+                            Nedostaju obavezni podaci ili PDF za objavu.
                         </span>
                     )}
                 </div>

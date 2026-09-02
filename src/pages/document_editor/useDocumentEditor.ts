@@ -25,20 +25,6 @@ import type {UserProfile} from "../../data/types/UserProfile.ts";
  *      - technique
  *      - storage
  */
-const REQUIRED_TEXT_FIELDS: (keyof RestorationData)[] = [
-    'category',
-    'inventoryNumber',
-    'name',
-    'author',
-    'date',
-    'material',
-    'technique',
-];
-
-const REQUIRED_LIST_FIELDS: (keyof RestorationData)[] = [
-    'typeOfAnalysis',
-    'works'
-];
 
 export const INITIAL_DATA: RestorationData = {
     category: 'UNSPECIFIED',
@@ -307,10 +293,61 @@ export function useDocumentEditor(id?: string) {
     };
 
     // Validation
-    const isTextValid = REQUIRED_TEXT_FIELDS.every(field => {
+
+    const GLOBAL_REQUIRED_FIELDS: (keyof RestorationData)[] = [
+        'category',
+        'name',
+        'keywords'
+    ];
+
+    const CONDITIONAL_REQUIRED_FIELDS: (keyof RestorationData)[] = [
+        'inventoryNumber',
+        'author',
+        'date',
+        'material',
+        'technique',
+        'storage'
+    ];
+
+    const EXEMPT_CATEGORIES = [
+        'ISTRAZIVACKI_RADOVI_I_REFERENTNI_MATERIJALI',
+        'DIPLOMSKI_I_SEMINARSKI_RADOVI',
+        'UNSPECIFIED'
+    ];
+
+    const checkIsFieldRequired = (fieldName: keyof RestorationData): boolean => {
+        if (GLOBAL_REQUIRED_FIELDS.includes(fieldName)) return true;
+
+        if (CONDITIONAL_REQUIRED_FIELDS.includes(fieldName)) {
+            const selectedCategory = formManager.restorationData.category;
+
+            // If no category is selected or it is in the exempt list, the field is NOT required
+            if (!selectedCategory || EXEMPT_CATEGORIES.includes(selectedCategory)) {
+                return false;
+            }
+
+            // For all other categories, the fields ARE required
+            return true;
+        }
+
+        return false;
+    };
+
+    // Execution: single clean check for all required fields
+    const isFormFilled = [...GLOBAL_REQUIRED_FIELDS, ...CONDITIONAL_REQUIRED_FIELDS].every(field => {
+        // Skip checking if the field isn't required for this specific category
+        if (!checkIsFieldRequired(field)) return true;
+
         const val = formManager.restorationData[field] as unknown;
 
-        if (typeof val !== 'string') return false;
+        if (field === 'keywords') {
+            const keywordsString = val as string || '';
+            const keywordsCount = keywordsString.split(',').map(k => k.trim()).filter(Boolean).length;
+            return keywordsCount >= 3;
+        }
+
+        // Failsafe for empty values
+        if (val === undefined || val === null || typeof val !== 'string') return false;
 
         if (field === 'category') {
             return val !== 'UNSPECIFIED' && val.trim() !== '';
@@ -319,15 +356,10 @@ export function useDocumentEditor(id?: string) {
         return val.trim() !== '';
     });
 
-    const areListsValid = REQUIRED_LIST_FIELDS.every(field => {
-        const val = formManager.restorationData[field] as unknown;
+    // Check for PDF in either newly uploaded files or existing server paths
+    const hasPdf = Boolean(fileManager.files.pdf) || Boolean(fileManager.serverPaths.pdf?.trim());
 
-        return Array.isArray(val) && val.length > 0;
-    });
-
-    const isFormFilled = isTextValid && areListsValid;
-
-    const isPublishable = isFormFilled && (fileManager.files.pdf !== null || fileManager.serverPaths.pdf !== '');
+    const isPublishable = isFormFilled && hasPdf;
     const hasChanges = formManager.hasChanges || fileManager.hasAnyFileChanges;
 
     const handleSave = async (publish: boolean) => {
@@ -442,6 +474,8 @@ export function useDocumentEditor(id?: string) {
         restorationData: formManager.restorationData,
         handleRestorationDataChange: formManager.updateField,
         metadata: formManager.metadata,
-        fileManager
+        fileManager,
+
+        checkIsFieldRequired
     };
 }

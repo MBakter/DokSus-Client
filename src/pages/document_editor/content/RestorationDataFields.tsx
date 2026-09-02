@@ -1,5 +1,5 @@
 import {type RestorationData} from "../../../data/types/Document.ts";
-import { useState } from 'preact/hooks';
+import {useState} from 'preact/hooks';
 import {IconPlus, IconTrash, IconX} from "../../../assets/Icons.tsx";
 import {useCategoryReference} from "../../../data/reference/ReferenceData.ts";
 
@@ -11,19 +11,25 @@ export interface RestorationDataProps {
     ) => void;
 }
 
+const MIN_KEYWORDS = 3;
+const MAX_KEYWORDS = 10;
+
 export const useTextHandler = (onChange: any) => {
     return (field: keyof RestorationData) => (e: Event) => {
         onChange(field, (e.currentTarget as any).value);
     };
 };
-export function RestorationDataFields({ restorationData, handleRestorationDataChange }: any) {
+
+export function RestorationDataFields({restorationData, handleRestorationDataChange, checkRequired}: any) {
     return (
         <div className="flex flex-col gap-6">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Podaci o predmetu i restauraciji</h2>
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Podaci o predmetu i
+                restauraciji</h2>
 
             <BasicDataSection
                 restorationData={restorationData}
                 onChange={handleRestorationDataChange}
+                checkRequired={checkRequired}
             />
 
             <MaterialDetailsSection
@@ -36,19 +42,29 @@ export function RestorationDataFields({ restorationData, handleRestorationDataCh
                 onChange={handleRestorationDataChange}
             />
 
-            <AnalysisSectionPlaceholder />
+            <AnalysisSectionPlaceholder/>
 
             <KeywordsSection
                 restorationData={restorationData}
                 onChange={handleRestorationDataChange}
+                checkRequired={checkRequired}
             />
         </div>
     );
 }
 
-export function BasicDataSection({ restorationData, onChange }: RestorationDataProps) {
-    const { categories, isLoading } = useCategoryReference();
+export function BasicDataSection({restorationData, onChange, checkRequired}: any) {
+    const {categories, isLoading} = useCategoryReference();
     const textHandler = useTextHandler(onChange);
+
+    const Label = ({field, label}: { field: string, label: string }) => (
+        <label className="text-sm font-semibold text-slate-700 flex items-center gap-1">
+            {label}
+            {checkRequired && checkRequired(field) && (
+                <span className="text-red-500 font-bold" title="Obavezno polje">*</span>
+            )}
+        </label>
+    );
 
     return (
         <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200">
@@ -59,7 +75,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Kategorija</label>
+                    <Label field="category" label="Kategorija"/>
                     <select
                         name="category"
                         value={restorationData.category || "UNSPECIFIED"}
@@ -67,7 +83,11 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                         disabled={isLoading}
                         className="border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all w-full disabled:opacity-50"
                     >
-                        {categories.map((cat) => (
+                        <option value="UNSPECIFIED" disabled hidden>
+                            Odaberite kategoriju...
+                        </option>
+
+                        {categories.filter(c => c.id !== 'UNSPECIFIED').map((cat) => (
                             <option key={cat.id} value={cat.id}>
                                 {cat.name}
                             </option>
@@ -76,7 +96,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Inventarni broj (OKIRU)</label>
+                    <Label field="inventoryNumber" label="Inventarni broj (OKIRU)"/>
                     <input
                         type="text" name="inventoryNumber"
                         value={restorationData.inventoryNumber}
@@ -87,7 +107,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1 md:col-span-2">
-                    <label className="text-sm font-semibold text-slate-700">Naslov / Naziv</label>
+                    <Label field="name" label="Naslov / Naziv"/>
                     <input
                         type="text" name="name"
                         value={restorationData.name}
@@ -97,7 +117,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Autor</label>
+                    <Label field="author" label="Autor"/>
                     <input
                         type="text" name="author"
                         value={restorationData.author}
@@ -107,7 +127,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Datacija</label>
+                    <Label field="date" label="Datacija"/>
                     <input
                         type="text" name="date"
                         value={restorationData.date}
@@ -118,7 +138,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Materijal</label>
+                    <Label field="material" label="Materijal"/>
                     <input
                         type="text" name="material"
                         value={restorationData.material}
@@ -128,7 +148,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Tehnika</label>
+                    <Label field="technique" label="Tehnika"/>
                     <input
                         type="text" name="technique"
                         value={restorationData.technique}
@@ -138,7 +158,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Izvorni smještaj / lokacija</label>
+                    <Label field="location" label="Izvorni smještaj / lokacija"/>
                     <input
                         type="text" name="location"
                         value={restorationData.location}
@@ -148,7 +168,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
                 </div>
 
                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-slate-700">Trenutni smještaj / lokacija</label>
+                    <Label field="storage" label="Trenutni smještaj / lokacija"/>
                     <input
                         type="text" name="storage"
                         value={restorationData.storage}
@@ -161,7 +181,7 @@ export function BasicDataSection({ restorationData, onChange }: RestorationDataP
     );
 }
 
-export function MaterialDetailsSection({ restorationData, onChange }: RestorationDataProps) {
+export function MaterialDetailsSection({restorationData, onChange}: RestorationDataProps) {
     const textHandler = useTextHandler(onChange);
 
     return (
@@ -202,10 +222,9 @@ export function MaterialDetailsSection({ restorationData, onChange }: Restoratio
     );
 }
 
-export function KeywordsSection({ restorationData, onChange }: any) {
+export function KeywordsSection({ restorationData, onChange, checkRequired }: any) {
     const [inputValue, setInputValue] = useState("");
 
-    // Safely parse keywords whether they are stored as a string or an array
     const getTagsArray = (keywords: any): string[] => {
         if (Array.isArray(keywords)) return keywords;
         if (typeof keywords === 'string') {
@@ -215,12 +234,16 @@ export function KeywordsSection({ restorationData, onChange }: any) {
     };
 
     const tags = getTagsArray(restorationData.keywords);
+    const tagsCount = tags.length;
+
+    // Verify if keywords is required using the passed prop
+    const isRequired = checkRequired ? checkRequired('keywords') : true;
 
     const handleAddTag = () => {
         const newTag = inputValue.trim();
-        if (!newTag || tags.includes(newTag)) return;
+        // Prevent adding if empty, already exists, or max limit is reached
+        if (!newTag || tags.includes(newTag) || tagsCount >= MAX_KEYWORDS) return;
 
-        // Safely pass the updated string back through onChange
         onChange('keywords', (prev: any) => {
             const current = getTagsArray(prev);
             return [...current, newTag].join(', ');
@@ -245,9 +268,25 @@ export function KeywordsSection({ restorationData, onChange }: any) {
 
     return (
         <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
-                Ključne riječi
-            </h3>
+            <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-2">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-1">
+                    Ključne riječi
+                    {isRequired && (
+                        <span className="text-red-500 font-bold" title="Obavezno polje">*</span>
+                    )}
+                </h3>
+                {isRequired && (
+                    <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${tagsCount >= MIN_KEYWORDS ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                    >
+                        {tagsCount < MIN_KEYWORDS
+                            ? `Dodajte još ${MIN_KEYWORDS - tagsCount}`
+                            : tagsCount >= MAX_KEYWORDS
+                                ? `Maksimum dosegnut (${MAX_KEYWORDS}/${MAX_KEYWORDS})`
+                                : `${tagsCount}/${MAX_KEYWORDS}`}
+                    </span>
+                )}
+            </div>
 
             <div className="flex flex-col gap-3">
                 <div className="flex gap-2">
@@ -256,18 +295,19 @@ export function KeywordsSection({ restorationData, onChange }: any) {
                         value={inputValue}
                         onChange={(e) => setInputValue((e.target as HTMLInputElement).value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Unesite ključnu riječ i pritisnite Enter..."
-                        className="flex-grow border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
+                        disabled={tagsCount >= MAX_KEYWORDS}
+                        placeholder={tagsCount >= MAX_KEYWORDS ? "Dosegnut je maksimalan broj ključnih riječi." : "Unesite ključnu riječ i pritisnite Enter..."}
+                        className="flex-grow border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all disabled:opacity-50 disabled:bg-slate-50"
                     />
 
                     <button
                         type="button"
                         onClick={handleAddTag}
-                        disabled={!inputValue.trim()}
+                        disabled={!inputValue.trim() || tagsCount >= MAX_KEYWORDS}
                         className="relative z-10 flex items-center justify-center gap-2 bg-slate-700 hover:bg-blue-900 text-white border border-slate-800 hover:border-blue-900 px-4 py-2.5 rounded-md transition-all duration-200 disabled:opacity-40 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed shadow-sm text-sm font-semibold shrink-0 cursor-pointer"
-                        title="Dodaj ključnu riječ"
+                        title={tagsCount >= MAX_KEYWORDS ? "Maksimum dosegnut" : "Dodaj ključnu riječ"}
                     >
-                        <IconPlus className="w-4 h-4 pointer-events-none" />
+                        <IconPlus className="w-4 h-4 pointer-events-none"/>
                         <span className="pointer-events-none">Dodaj</span>
                     </button>
                 </div>
@@ -286,7 +326,7 @@ export function KeywordsSection({ restorationData, onChange }: any) {
                                     className="text-blue-400 hover:text-red-600 focus:outline-none transition-colors flex items-center justify-center cursor-pointer"
                                     title="Ukloni"
                                 >
-                                    <IconX />
+                                    <IconX/>
                                 </button>
                             </span>
                         ))}
@@ -300,7 +340,8 @@ export function KeywordsSection({ restorationData, onChange }: any) {
 //// TODO!
 export function AnalysisSectionPlaceholder() {
     return (
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-dashed border-slate-300 flex flex-col items-center justify-center py-12 text-slate-400">
+        <div
+            className="bg-white p-8 rounded-lg shadow-sm border border-dashed border-slate-300 flex flex-col items-center justify-center py-12 text-slate-400">
             <h3 className="text-lg font-bold text-slate-600 mb-2">Vrste analiza</h3>
             <p className="text-sm">Ovdje će biti smještena složena komponenta za odabir vrsta analiza.</p>
             <span className="mt-4 px-3 py-1 bg-slate-100 rounded text-xs font-mono text-slate-500">U izradi / Čeka dizajn</span>
@@ -308,7 +349,7 @@ export function AnalysisSectionPlaceholder() {
     );
 }
 
-export function WorksSection({ restorationData, onChange }: any) {
+export function WorksSection({restorationData, onChange}: any) {
     const [workName, setWorkName] = useState("");
     const [workMaterial, setWorkMaterial] = useState("");
 
@@ -323,7 +364,7 @@ export function WorksSection({ restorationData, onChange }: any) {
 
         onChange('works', (prevWorks: any[]) => [
             ...prevWorks,
-            { name: workName.trim(), material: workMaterial.trim() }
+            {name: workName.trim(), material: workMaterial.trim()}
         ]);
 
         setWorkName("");
@@ -347,7 +388,7 @@ export function WorksSection({ restorationData, onChange }: any) {
 
         onChange('works', (prevWorks: any[]) => {
             const updated = [...prevWorks];
-            updated[index] = { name: editName.trim(), material: editMaterial.trim() };
+            updated[index] = {name: editName.trim(), material: editMaterial.trim()};
             return updated;
         });
 
@@ -377,7 +418,8 @@ export function WorksSection({ restorationData, onChange }: any) {
                         // EDIT MODE
                         if (editingIndex === index) {
                             return (
-                                <div key={index} className="flex flex-col gap-3 p-5 rounded-md border border-blue-200 bg-blue-50/50 shadow-sm">
+                                <div key={index}
+                                     className="flex flex-col gap-3 p-5 rounded-md border border-blue-200 bg-blue-50/50 shadow-sm">
                                     <h4 className="text-sm font-semibold text-blue-900 mb-1">Uredi rad</h4>
                                     <textarea
                                         value={editName}
@@ -389,7 +431,12 @@ export function WorksSection({ restorationData, onChange }: any) {
                                         type="text"
                                         value={editMaterial}
                                         onChange={(e) => setEditMaterial((e.currentTarget as HTMLInputElement).value)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveEdit(index); } }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSaveEdit(index);
+                                            }
+                                        }}
                                         className="w-full border border-blue-300 rounded-md p-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all bg-white"
                                     />
                                     <div className="flex justify-end gap-2 mt-2">
@@ -415,18 +462,21 @@ export function WorksSection({ restorationData, onChange }: any) {
 
                         // VIEW MODE (Restored subtle blue accent borders and background)
                         return (
-                            <div key={index} className="flex justify-between gap-4 p-5 rounded-md border border-blue-100 bg-blue-50/30 group hover:border-blue-200 transition-colors">
+                            <div key={index}
+                                 className="flex justify-between gap-4 p-5 rounded-md border border-blue-100 bg-blue-50/30 group hover:border-blue-200 transition-colors">
                                 <div className="flex flex-col gap-2 flex-1 min-w-0">
                                     <p className="text-sm font-medium text-slate-800 leading-relaxed break-words">
                                         {work.name}
                                     </p>
 
                                     <p className="text-sm text-slate-600 break-words border-t border-blue-100 pt-2 mt-1">
-                                        <span className="font-semibold text-slate-700">Korišteni materijal:</span> {work.material}
+                                        <span
+                                            className="font-semibold text-slate-700">Korišteni materijal:</span> {work.material}
                                     </p>
                                 </div>
 
-                                <div className="flex-shrink-0 flex gap-1.5 self-start opacity-15 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                <div
+                                    className="flex-shrink-0 flex gap-1.5 self-start opacity-15 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                     <button
                                         type="button"
                                         onClick={() => handleStartEdit(index, work)}
@@ -440,7 +490,7 @@ export function WorksSection({ restorationData, onChange }: any) {
                                         className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors border border-slate-200 bg-white shadow-sm"
                                         title="Ukloni rad"
                                     >
-                                        <IconTrash className="w-4 h-4" />
+                                        <IconTrash className="w-4 h-4"/>
                                     </button>
                                 </div>
                             </div>
@@ -466,7 +516,12 @@ export function WorksSection({ restorationData, onChange }: any) {
                         type="text"
                         value={workMaterial}
                         onChange={(e) => setWorkMaterial((e.currentTarget as HTMLInputElement).value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddWork(); } }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddWork();
+                            }
+                        }}
                         placeholder="Korišteni materijal (npr. Destilirana voda, blagi deterdžent)..."
                         className="flex-grow border border-slate-300 rounded-md p-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all bg-white"
                     />
@@ -478,7 +533,7 @@ export function WorksSection({ restorationData, onChange }: any) {
                         disabled={!workName.trim() || !workMaterial.trim()}
                         className="relative z-10 flex items-center justify-center gap-2 bg-slate-700 hover:bg-blue-900 text-white border border-slate-800 hover:border-blue-900 px-4 py-2.5 rounded-md transition-all duration-200 disabled:opacity-40 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed shadow-sm text-sm font-semibold shrink-0 cursor-pointer"
                     >
-                        <IconPlus className="w-4 h-4 pointer-events-none" />
+                        <IconPlus className="w-4 h-4 pointer-events-none"/>
                         <span className="pointer-events-none">Dodaj</span>
                     </button>
                 </div>
