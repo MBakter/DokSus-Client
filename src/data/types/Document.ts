@@ -80,13 +80,6 @@ export interface RestorationData {
     keywords: string;               // Ključne riječi
 }
 
-//todo group:
-//  - added as just a text in a document
-//  - later documents can see all the groups that are already in a document
-//  - so there should be a collection of groups already added to existing documents
-//      - if group is removed from every document it should be removed from collection
-
-
 //This is a dropdown (multiple selection + store int times for item + goal of analysis (written after selection))
 export interface Analysis {
     type: string,

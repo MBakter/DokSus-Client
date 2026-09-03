@@ -358,13 +358,14 @@ interface VideoSectionProps {
     onRemoveVideo: (isServer: boolean) => void;
 }
 
-export function VideoSection({
-                                 videoFile,
-                                 serverVideo,
-                                 onChange,
-                                 onUpdateVideoName,
-                                 onRemoveVideo
-                             }: VideoSectionProps) {
+export function VideoSection(
+    {
+        videoFile,
+        serverVideo,
+        onChange,
+        onUpdateVideoName,
+        onRemoveVideo
+    }: VideoSectionProps) {
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
             <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">Videozapis</h2>

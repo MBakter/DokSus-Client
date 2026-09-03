@@ -56,3 +56,25 @@ export function useAnalysisTypeReference() {
 
     return { analysisTypes, isLoading };
 }
+
+export function useGroupReference() {
+    const [groups, setGroups] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchGroups = async () => {
+            try {
+                const response = await axiosClient.get<string[]>('/reference-data/groups');
+                setGroups(response.data);
+            } catch (error) {
+                console.error("Failed to load groups", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchGroups();
+    }, []);
+
+    return { groups, isLoading };
+}

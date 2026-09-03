@@ -5,6 +5,7 @@ import {
     useAnalysisTypeReference,
     useCategoryReference
 } from "../../../data/reference/ReferenceData.ts";
+import {GroupSuggestionInput} from "./components/GroupSuggestionInput.tsx";
 
 export interface RestorationDataProps {
     restorationData: RestorationData;
@@ -81,6 +82,7 @@ export function BasicDataSection({restorationData, onChange, checkRequired}: any
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
+                {/* COLUMN 1: Category */}
                 <div className="flex flex-col gap-1">
                     <Label field="category" label="Kategorija"/>
                     <select
@@ -102,6 +104,35 @@ export function BasicDataSection({restorationData, onChange, checkRequired}: any
                     </select>
                 </div>
 
+                {/* COLUMN 2: Group*/}
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-baseline gap-2">
+                        <Label field="group" label="Grupa / Zbirka"/>
+
+                    </div>
+                    <GroupSuggestionInput
+                        name="group"
+                        value={restorationData.group}
+                        onChange={textHandler('group')}
+                    />
+
+                    <p className="text-xs text-slate-500 mt-0.5 leading-tight">
+                        Dodajte ako je umjetnina dio specifične zbirke, ciklusa ili projekta.
+                    </p>
+                </div>
+
+                {/* SPAN 2: Name */}
+                <div className="flex flex-col gap-1 md:col-span-2">
+                    <Label field="name" label="Naslov / Naziv"/>
+                    <input
+                        type="text" name="name"
+                        value={restorationData.name}
+                        onChange={textHandler('name')}
+                        className="border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all font-medium"
+                    />
+                </div>
+
+                {/* COLUMN 1: Inventory Number */}
                 <div className="flex flex-col gap-1">
                     <Label field="inventoryNumber" label="Inventarni broj (OKIRU)"/>
                     <input
@@ -113,16 +144,7 @@ export function BasicDataSection({restorationData, onChange, checkRequired}: any
                     />
                 </div>
 
-                <div className="flex flex-col gap-1 md:col-span-2">
-                    <Label field="name" label="Naslov / Naziv"/>
-                    <input
-                        type="text" name="name"
-                        value={restorationData.name}
-                        onChange={textHandler('name')}
-                        className="border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all font-medium"
-                    />
-                </div>
-
+                {/* COLUMN 2: Author */}
                 <div className="flex flex-col gap-1">
                     <Label field="author" label="Autor"/>
                     <input
