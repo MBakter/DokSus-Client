@@ -1,29 +1,56 @@
 import { useState } from 'preact/hooks';
 import { registerUser } from '../api/AuthApi';
+import {ErrorCode} from "../api/types/ErrorCode.ts";
 
-export function Register() {
+export function useRegister() {
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState<string | null>(null);
+
+    // Strongly typed error state
+    const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (e: Event) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setError(null);
+        setErrorCode(null);
+        setSuccessMessage(null);
         setIsLoading(true);
 
         try {
             await registerUser({ name, surname, email, password });
-            window.location.href = '/prijava'; // Redirect to Login upon success
-        } catch (err) {
-            setError('Pogreška prilikom registracije. Pokušajte ponovno.');
-            console.error(err);
+            setSuccessMessage('Uspješna registracija! Preusmjeravanje...');
+            setTimeout(() => {
+                window.location.href = '/prijava';
+            }, 1500);
+        } catch (err: any) {
+            const backendCode = err.response?.data?.errorCode;
+
+            setErrorCode(ErrorCode[backendCode as keyof typeof ErrorCode] || ErrorCode.UNKNOWN_ERROR);
         } finally {
             setIsLoading(false);
         }
     };
+
+    return {
+        name, setName,
+        surname, setSurname,
+        email, setEmail,
+        password, setPassword,
+        errorCode, successMessage, isLoading, handleSubmit
+    };
+}
+
+export function Register() {
+    const {
+        name, setName,
+        surname, setSurname,
+        email, setEmail,
+        password, setPassword,
+        errorCode, successMessage, isLoading, handleSubmit
+    } = useRegister();
 
     return (
         <div className="flex justify-center items-center py-16 bg-slate-50 min-h-[calc(100vh-140px)]">
@@ -33,9 +60,27 @@ export function Register() {
                     <p className="text-sm text-slate-500 mt-2">Registracija za studente i djelatnike</p>
                 </div>
 
-                {error && (
-                    <div className="bg-red-50 text-red-700 p-3 rounded-md mb-6 text-sm border border-red-200 font-medium">
-                        {error}
+                {errorCode === ErrorCode.NOT_WHITELISTED && (
+                    <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
+                        Vaša email adresa nije pronađena na popisu ovlaštenih korisnika. Za odobrenje pristupa, molimo kontaktirajte instituciju. Detalje možete pronaći na <a href="/kontakt" className="underline font-bold hover:text-red-900">kontakt stranici</a>.
+                    </div>
+                )}
+
+                {errorCode === ErrorCode.ALREADY_REGISTERED && (
+                    <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
+                        Ova email adresa je već registrirana. Pokušajte se prijaviti.
+                    </div>
+                )}
+
+                {(errorCode === ErrorCode.INTERNAL_ERROR || errorCode === ErrorCode.UNKNOWN_ERROR) && (
+                    <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
+                        Dogodila se neočekivana pogreška na poslužitelju. Pokušajte ponovno kasnije.
+                    </div>
+                )}
+
+                {successMessage && (
+                    <div className="bg-emerald-50 text-emerald-800 p-3 rounded-md mb-6 text-sm border border-emerald-200 font-medium">
+                        {successMessage}
                     </div>
                 )}
 
@@ -43,57 +88,30 @@ export function Register() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ime</label>
-                            <input
-                                type="text"
-                                required
-                                value={name}
-                                onInput={(e) => setName((e.target as HTMLInputElement).value)}
-                                className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900"
-                            />
+                            <input type="text" required value={name} onChange={(e) => setName((e.target as HTMLInputElement).value)} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900" />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1.5">Prezime</label>
-                            <input
-                                type="text"
-                                required
-                                value={surname}
-                                onInput={(e) => setSurname((e.target as HTMLInputElement).value)}
-                                className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900"
-                            />
+                            <input type="text" required value={surname} onChange={(e) => setSurname((e.target as HTMLInputElement).value)} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900" />
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
-                        <input
-                            type="email"
-                            required
-                            value={email}
-                            onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900"
-                        />
+                        <input type="email" required value={email} onChange={(e) => setEmail((e.target as HTMLInputElement).value)} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900" />
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">Lozinka</label>
-                        <input
-                            type="password"
-                            required
-                            value={password}
-                            onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900"
-                        />
+                        <input type="password" required value={password} onChange={(e) => setPassword((e.target as HTMLInputElement).value)} className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900" />
                     </div>
+
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-blue-900 text-white font-semibold tracking-wide py-2.5 rounded-md mt-2 hover:bg-blue-800 active:bg-blue-950 transition-colors disabled:opacity-70 shadow-sm"
+                        className="w-full bg-blue-900 text-white font-semibold tracking-wide py-2.5 rounded-md mt-2 hover:bg-blue-800 active:bg-blue-950 transition-colors disabled:opacity-70 shadow-sm cursor-pointer"
                     >
                         {isLoading ? 'Registracija...' : 'Otvori račun'}
                     </button>
                 </form>
-
-                <div className="mt-8 pt-6 border-t border-slate-100 text-center text-sm text-slate-500">
-                    Već imate otvoren račun? <a href="/prijava" className="text-blue-900 font-semibold hover:underline">Prijavite se</a>
-                </div>
             </div>
         </div>
     );

@@ -1,30 +1,41 @@
 import { useState, useContext } from 'preact/hooks';
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../api/AuthApi';
+import type {FormEvent} from "preact/compat";
 
-export function Login() {
+export function useLogin() {
     const { login } = useContext(AuthContext);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (e: Event) => {
-        e.preventDefault();
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault(); // Now correctly prevents the page refresh
         setError(null);
         setIsLoading(true);
 
         try {
             const response = await loginUser({ email, password });
             login(response.token, response.user);
-            window.location.href = '/'; // Redirect to Home upon success
-        } catch (err) {
-            setError('Neuspješna prijava. Provjerite podatke.');
-            console.error(err);
+            window.location.href = '/';
+        } catch (err: any) {
+            const message = err.response?.data?.error || 'Neuspješna prijava. Provjerite podatke.';
+            setError(message);
         } finally {
             setIsLoading(false);
         }
     };
+
+    return {
+        email, setEmail,
+        password, setPassword,
+        error, isLoading, handleSubmit
+    };
+}
+
+export function Login() {
+    const { email, setEmail, password, setPassword, error, isLoading, handleSubmit } = useLogin();
 
     return (
         <div className="flex justify-center items-center py-24 bg-slate-50 min-h-[calc(100vh-140px)]">
@@ -47,7 +58,7 @@ export function Login() {
                             type="email"
                             required
                             value={email}
-                            onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+                            onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
                             className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900"
                         />
                     </div>
@@ -57,14 +68,14 @@ export function Login() {
                             type="password"
                             required
                             value={password}
-                            onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+                            onChange={(e) => setPassword((e.target as HTMLInputElement).value)}
                             className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-slate-900 transition-all focus:outline-none focus:bg-white focus:border-blue-900 focus:ring-1 focus:ring-blue-900"
                         />
                     </div>
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-blue-900 text-white font-semibold tracking-wide py-2.5 rounded-md mt-2 hover:bg-blue-800 active:bg-blue-950 transition-colors disabled:opacity-70 shadow-sm"
+                        className="w-full bg-blue-900 text-white font-semibold tracking-wide py-2.5 rounded-md mt-2 hover:bg-blue-800 active:bg-blue-950 transition-colors disabled:opacity-70 shadow-sm cursor-pointer"
                     >
                         {isLoading ? 'Provjera podataka...' : 'Prijavi se'}
                     </button>

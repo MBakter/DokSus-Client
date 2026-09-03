@@ -33,17 +33,27 @@ axiosClient.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        if (!error.response) {
+            // Network error (server is completely down)
+            console.error("Mrežna greška ili server ne odgovara.");
+            return Promise.reject(error);
+        }
+
+        const status = error.response.status;
+
+        // ONLY intercept 401 Unauthorized (dead or missing token)
+        if (status === 401) {
             console.error("Session expired or access denied. Redirecting to login.");
 
-            // Completely wipe the dead session data
             localStorage.removeItem('jwt_token');
             localStorage.removeItem('user_data');
 
-            // Force redirect to the login page
+            // Redirect ONLY when the token is actually invalid
             window.location.href = '/prijava';
         }
 
+        // For 403 (Forbidden), 500 (Server Crash), 400 (Bad Request):
+        // DO NOTHING. Just pass the error to the component so it can handle it natively.
         return Promise.reject(error);
     }
 );

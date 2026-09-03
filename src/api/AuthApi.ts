@@ -15,17 +15,14 @@ export interface LoginRequest {
 
 export interface AuthResponse {
     token: string;
-    user: UserProfile; // Aligned with the rest of your frontend code
+    user: UserProfile;
 }
 
 export const registerUser = async (data: RegisterRequest): Promise<void> => {
     try {
         await axiosClient.post('/auth/register', data);
     } catch (error: any) {
-        if (error.response && error.response.data && error.response.data.error) {
-            throw new Error(error.response.data.error);
-        }
-        throw new Error("Dogodila se pogreška prilikom registracije.");
+        throw error;
     }
 };
 
