@@ -149,7 +149,7 @@ export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm w-full">
             <h2 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
-                Glavni Dokument (PDF) <span className="text-red-500">*</span>
+                Glavni Dokument (PDF) <span className="text-red-500" title="Obavezno polje">*</span>
             </h2>
 
             {/* Removed the inner gray background; using a clean, open layout */}

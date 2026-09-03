@@ -7,7 +7,7 @@ export const fetchUserProfiles = async (emails: string[]): Promise<Record<string
     try {
         const uniqueEmails = Array.from(new Set(emails));
         const response = await axiosClient.get<UserProfile[]>('/users/profiles', {
-            params: { emails: uniqueEmails.join(',') }
+            params: {emails: uniqueEmails.join(',')}
         });
 
         // Convert the array into a dictionary for O(1) lookup during mapping
@@ -35,19 +35,19 @@ export const fetchSingleUserProfile = async (email: string): Promise<UserProfile
     }
 };
 
-export const searchUsersByQuery = async (query: string): Promise<UserProfile[]> => {
-    // Added .trim() to prevent unnecessary API calls for whitespace
+export const searchUsersByQuery = async (query: string, isProfessor?: boolean): Promise<UserProfile[]> => {
     if (!query || query.trim().length < 2) return [];
 
     try {
-        const response = await axiosClient.get<UserProfile[]>('/users/search', {
-            params: { query: query.trim() } // Axios handles the URI encoding automatically
-        });
+        const params: any = {query: query.trim()};
+        if (isProfessor !== undefined) {
+            params.isProfessor = isProfessor;
+        }
 
+        const response = await axiosClient.get<UserProfile[]>('/users/search', {params});
         return response.data;
     } catch (error) {
         console.error("Error searching users by query:", error);
-        // Return an empty array so dropdowns/typeaheads fail gracefully
         return [];
     }
 };

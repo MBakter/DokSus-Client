@@ -48,14 +48,6 @@ export interface DocumentProfiles {
     mentorProfiles?: UserProfile[];
 }
 
-//todo DO MENTOR profile adder.
-// - in whitelisting you have to specify next to email if mentor.
-//      - Then when that email is registered set isMentor in userData
-// - Mentor field is required!! Mark it that at least one is needed
-
-// todo Document visibility, mentor change creator
-//  -
-
 //todo change labels in UI according to comments
 export interface RestorationData {
     category: string;

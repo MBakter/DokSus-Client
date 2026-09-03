@@ -12,20 +12,6 @@ import {
 } from "../../api/feature/DocumentApi.ts";
 import type {UserProfile} from "../../data/types/UserProfile.ts";
 
-/** todo
- *   Required for all
- *      - category
- *      - name
- *      - keywords (min. 3)
- *   Required fields for the first 5 categories
- *      - inventoryNumber
- *      - author
- *      - date
- *      - material
- *      - technique
- *      - storage
- */
-
 export const INITIAL_DATA: RestorationData = {
     category: 'UNSPECIFIED',
     inventoryNumber: '',
@@ -62,8 +48,14 @@ export function useDocumentForm() {
     const [isPublished, setIsPublished] = useState(false);
     const [visibility, setVisibility] = useState<Visibility>(Visibility.OKIRU);
     const [initialVisibility, setInitialVisibility] = useState<Visibility>(Visibility.OKIRU);
-    const [coAuthors, setCoAuthors] = useState<UserProfile[]>([]);
-    const [initialCoAuthors, setInitialCoAuthors] = useState<UserProfile[]>([]);
+
+    // Co-creators (Students)
+    const [coCreators, setCoCreators] = useState<UserProfile[]>([]);
+    const [initialCoCreators, setInitialCoCreators] = useState<UserProfile[]>([]);
+
+    // Mentors (Professors)
+    const [mentors, setMentors] = useState<UserProfile[]>([]);
+    const [initialMentors, setInitialMentors] = useState<UserProfile[]>([]);
 
     const initializeForm = (document: any) => {
         setRestorationData(document.restorationData);
@@ -73,18 +65,27 @@ export function useDocumentForm() {
         setVisibility(document.visibility || Visibility.OKIRU);
         setInitialVisibility(document.visibility || Visibility.OKIRU);
 
-        const fetchedAuthors = document.profiles?.coCreatorProfiles || [];
-        setCoAuthors(fetchedAuthors);
-        setInitialCoAuthors(fetchedAuthors);
+        const fetchedCoCreators = document.profiles?.coCreatorProfiles || [];
+        setCoCreators(fetchedCoCreators);
+        setInitialCoCreators(fetchedCoCreators);
+
+        const fetchedMentors = document.profiles?.mentorProfiles || [];
+        setMentors(fetchedMentors);
+        setInitialMentors(fetchedMentors);
     };
 
-    const handleAddCoAuthor = (author: UserProfile) => setCoAuthors(prev => [...prev, author]);
-    const handleRemoveCoAuthor = (email: string) => setCoAuthors(prev => prev.filter(a => a.email !== email));
+    const handleAddCoCreator = (user: UserProfile) => setCoCreators(prev => [...prev, user]);
+    const handleRemoveCoCreator = (email: string) => setCoCreators(prev => prev.filter(a => a.email !== email));
+
+    const handleAddMentor = (user: UserProfile) => setMentors(prev => [...prev, user]);
+    const handleRemoveMentor = (email: string) => setMentors(prev => prev.filter(a => a.email !== email));
 
     const hasRestorationDataChanges = JSON.stringify(restorationData) !== JSON.stringify(snapshot);
     const hasVisibilityChange = visibility !== initialVisibility;
-    const hasCoAuthorsChanges = JSON.stringify(coAuthors) !== JSON.stringify(initialCoAuthors);
-    const hasChanges = hasRestorationDataChanges || hasVisibilityChange || hasCoAuthorsChanges;
+    const hasCoCreatorsChanges = JSON.stringify(coCreators) !== JSON.stringify(initialCoCreators);
+    const hasMentorsChanges = JSON.stringify(mentors) !== JSON.stringify(initialMentors);
+
+    const hasChanges = hasRestorationDataChanges || hasVisibilityChange || hasCoCreatorsChanges || hasMentorsChanges;
 
     return {
         restorationData,
@@ -92,11 +93,14 @@ export function useDocumentForm() {
         metadata: {
             isPublished,
             visibility,
-            coAuthors,
+            coCreators,
+            mentors,
             setVisibility,
             setIsPublished,
-            handleAddCoAuthor,
-            handleRemoveCoAuthor
+            handleAddCoCreator,
+            handleRemoveCoCreator,
+            handleAddMentor,
+            handleRemoveMentor
         },
         initializeForm,
         hasChanges
@@ -334,7 +338,7 @@ export function useDocumentEditor(id?: string) {
     };
 
     // Execution: single clean check for all required fields
-    const isFormFilled = [...GLOBAL_REQUIRED_FIELDS, ...CONDITIONAL_REQUIRED_FIELDS].every(field => {
+    const areRestorationFieldsFilled = [...GLOBAL_REQUIRED_FIELDS, ...CONDITIONAL_REQUIRED_FIELDS].every(field => {
         // Skip checking if the field isn't required for this specific category
         if (!checkIsFieldRequired(field)) return true;
 
@@ -355,6 +359,12 @@ export function useDocumentEditor(id?: string) {
 
         return val.trim() !== '';
     });
+
+    // Mentors are unconditionally required (at least one must be selected)
+    const hasAtLeastOneMentor = formManager.metadata.mentors.length > 0;
+
+    // Combined form validation
+    const isFormFilled = areRestorationFieldsFilled && hasAtLeastOneMentor;
 
     // Check for PDF in either newly uploaded files or existing server paths
     const hasPdf = Boolean(fileManager.files.pdf) || Boolean(fileManager.serverPaths.pdf?.trim());
@@ -380,7 +390,8 @@ export function useDocumentEditor(id?: string) {
                 content: formManager.restorationData,
                 isPublished: publish,
                 visibility: formManager.metadata.visibility,
-                coCreatorEmails: formManager.metadata.coAuthors.map(a => a.email)
+                coCreatorEmails: formManager.metadata.coCreators.map(a => a.email),
+                mentorEmails: formManager.metadata.mentors.map(m => m.email)
             };
 
             if (!currentDocId) {
