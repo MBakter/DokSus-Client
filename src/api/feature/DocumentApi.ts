@@ -52,6 +52,14 @@ export const updateDocumentMetadata = async (id: string, data: any) => {
     return response.data;
 };
 
+/**
+ * This is only for professors to change the creator of a document
+ */
+export const updateDocumentCreator = async (id: string, newCreatorEmail: string) => {
+    const response = await axiosClient.put(`/documents/${id}/creator`, { email: newCreatorEmail });
+    return response.data;
+};
+
 // Axios automatically sets the correct multipart/form-data boundary when passing FormData
 export const uploadCover = async (id: string, file: File) => {
     const formData = new FormData();

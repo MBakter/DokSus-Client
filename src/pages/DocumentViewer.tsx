@@ -1,46 +1,65 @@
-import { useEffect, useState } from 'preact/hooks';
-import { fetchDocumentById } from "../api/feature/DocumentApi.ts";
+import {useContext, useEffect, useState} from 'preact/hooks';
+import {fetchDocumentById, updateDocumentCreator} from "../api/feature/DocumentApi.ts";
 
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
 import {getDownloadUrl, getInitials} from "../util/Utilities.ts";
-import {
-    IconCalendar,
-    IconCube,
-    IconImagePlaceholder,
-    IconPDF,
-    IconUser
-} from "../assets/Icons.tsx";
-import type {Document, RestorationData} from "../data/types/Document.ts";
-import type {UserProfile} from "../data/types/UserProfile.ts";
+import {IconCalendar, IconCube, IconImagePlaceholder, IconPDF, IconUser} from "../assets/Icons.tsx";
+import type {Document} from "../data/types/Document.ts";
+import {AuthContext} from "../context/AuthContext.tsx";
 
-interface DocumentViewerProps {
-    id: string;
+export function useDocumentViewer(id: string) {
+    const [document, setDocument] = useState<Document | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isChangingCreator, setIsChangingCreator] = useState(false);
+
+    const loadDoc = async () => {
+        setIsLoading(true);
+        try {
+            const doc = await fetchDocumentById(id);
+            setDocument(doc);
+        } catch (error) {
+            console.error("Failed to fetch document", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (id) loadDoc();
+    }, [id]);
+
+    const handleCreatorChange = async (newEmail: string) => {
+        if (!newEmail || newEmail.trim() === '') return;
+
+        setIsChangingCreator(true);
+        try {
+            await updateDocumentCreator(id, newEmail.trim());
+            await loadDoc(); // Reload the document to get the updated profiles
+            alert("Vlasnik dokumenta je uspješno promijenjen.");
+        } catch (error) {
+            console.error("Failed to update creator", error);
+            alert("Dogodila se greška prilikom promjene vlasnika.");
+        } finally {
+            setIsChangingCreator(false);
+        }
+    };
+
+    return {
+        document,
+        isLoading,
+        isChangingCreator,
+        handleCreatorChange
+    };
 }
-
-const getModelUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}#model.glb`;
 
 //TODO: REFACTOR UI
 
-export function DocumentViewer({ id }: DocumentViewerProps) {
-    const [document, setDocument] = useState<Document | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const loadDoc = async () => {
-            try {
-                const doc = await fetchDocumentById(id);
-                setDocument(doc);
-            } catch (error) {
-                console.error("Failed to fetch document", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        if (id) loadDoc();
-    }, [id]);
+export function DocumentViewer({ id }: { id: string }) {
+    const { document, isLoading, isChangingCreator, handleCreatorChange } = useDocumentViewer(id);
+    const { user } = useContext(AuthContext); // Get current logged in user
 
     if (isLoading) {
         return (
@@ -64,7 +83,6 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
         );
     }
 
-    // Updated to extract from restorationData, files, and profiles objects
     const { restorationData, files, profiles } = document;
 
     const coverPath = files?.coverPath;
@@ -75,7 +93,6 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
 
     const hasMultimedia = pdfPath || (projectPhotos && projectPhotos.length > 0) || (models3d && models3d.length > 0) || video;
 
-    // Combine and deduplicate profiles from the new nested structure
     const allProfiles = [
         profiles?.creatorProfile,
         ...(profiles?.coCreatorProfiles || [])
@@ -93,6 +110,9 @@ export function DocumentViewer({ id }: DocumentViewerProps) {
                     coverPath={coverPath}
                     profiles={uniqueProfiles}
                     creatorEmail={creatorEmail}
+                    isProfessor={user?.isProfessor || false}
+                    isChangingCreator={isChangingCreator}
+                    onCreatorChange={handleCreatorChange}
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -131,19 +151,41 @@ const DetailItem = ({ label, value, fullWidth = false }: { label: string; value:
 // --- View Sections ---
 
 interface HeroSectionProps {
-    restorationData: RestorationData;
-    coverPath: string | null | undefined;
-    profiles: UserProfile[];
+    restorationData: any;
+    coverPath?: string;
+    profiles: any[];
     creatorEmail: string;
+    isProfessor: boolean;
+    isChangingCreator: boolean;
+    onCreatorChange: (email: string) => void;
 }
 
-const HeroSection = ({ restorationData, coverPath, profiles, creatorEmail }: HeroSectionProps) => {
+const HeroSection = ({
+                         restorationData,
+                         coverPath,
+                         profiles,
+                         creatorEmail,
+                         isProfessor,
+                         isChangingCreator,
+                         onCreatorChange
+                     }: HeroSectionProps) => {
+
+    const handleChangeOwnerClick = () => {
+        // Single popup with both the warning and the input request
+        const promptMessage = "UPOZORENJE: Promjenom vlasnika projekta trenutni vlasnik će trajno izgubiti pristup i prava uređivanja ovog dokumenta.\n\nUnesite e-mail adresu novog vlasnika dokumenta:";
+        const newEmail = window.prompt(promptMessage);
+
+        if (newEmail && newEmail.trim() !== '') {
+            onCreatorChange(newEmail);
+        }
+    };
+
     return (
         <div className="bg-white rounded-md shadow-sm border border-slate-300 flex flex-col md:flex-row border-t-4 border-t-blue-900">
             <div className="w-full md:w-5/12 lg:w-1/2 bg-slate-50 border-r border-slate-200 relative min-h-[350px]">
                 {coverPath ? (
                     <img
-                        src={getDownloadUrl(coverPath)}
+                        src={getDownloadUrl(coverPath)} // ensure getDownloadUrl is imported
                         alt={restorationData?.name || "Slika predmeta"}
                         className="absolute inset-0 w-full h-full object-cover"
                     />
@@ -186,8 +228,23 @@ const HeroSection = ({ restorationData, coverPath, profiles, creatorEmail }: Her
                     {/* OKIRU Authors Block */}
                     {profiles.length > 0 && (
                         <div className="pt-6 border-t border-slate-100">
-                            <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-3">Autori projekta</p>
-                            <div className="flex flex-wrap gap-2.5">
+                            {/* Header row with Title and Button */}
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider mb-0">Autori projekta</p>
+
+                                {isProfessor && (
+                                    <button
+                                        onClick={handleChangeOwnerClick}
+                                        disabled={isChangingCreator}
+                                        className="text-[10px] uppercase font-bold tracking-wider bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-md shadow-sm hover:shadow hover:border-blue-400 hover:text-blue-800 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                        title="Promijeni vlasnika (Samo za profesore)"
+                                    >
+                                        {isChangingCreator ? 'Spremanje...' : 'Promijeni vlasnika'}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2.5 items-center">
                                 {profiles.map(profile => {
                                     const isOwner = profile.email === creatorEmail;
                                     return (
@@ -200,6 +257,7 @@ const HeroSection = ({ restorationData, coverPath, profiles, creatorEmail }: Her
                                             <div className={`w-7 h-7 flex items-center justify-center text-white rounded-full text-[10px] font-bold shrink-0 transition-transform group-hover:scale-105 ${
                                                 isOwner ? 'bg-blue-900' : 'bg-slate-700'
                                             }`}>
+                                                {/* ensure getInitials is imported */}
                                                 {getInitials(profile.name, profile.surname)}
                                             </div>
                                             <div className="flex flex-col">
@@ -492,7 +550,7 @@ const ModelSection = ({ models3d }: { models3d: any[] }) => {
                 <div className="w-full h-[500px] relative border-b border-slate-200 bg-slate-200">
                     {isModelSupported ? (
                         <model-viewer
-                            src={getModelUrl(currentModel.path)}
+                            src={getDownloadUrl(currentModel.path)}
                             alt={currentModel.name}
                             auto-rotate="true"
                             camera-controls="true"

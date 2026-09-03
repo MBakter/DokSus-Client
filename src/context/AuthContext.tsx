@@ -1,5 +1,5 @@
-import { createContext } from 'preact';
-import { useState, type ReactNode } from 'preact/compat';
+import {createContext} from 'preact';
+import {type ReactNode, useState} from 'preact/compat';
 import {useEffect} from "preact/hooks";
 
 export interface User {
@@ -7,6 +7,7 @@ export interface User {
     name: string;
     surname: string;
     email: string;
+    isProfessor: boolean;
 }
 
 interface AuthContextType {

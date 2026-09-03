@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'preact/hooks';
-import {type Document } from '../data/types/Document';
+import {useEffect, useState} from 'preact/hooks';
+import {type Document} from '../data/types/Document';
 import type {UserProfile} from "../data/types/UserProfile.ts";
 import {fetchSingleUserProfile} from "../api/feature/UserProfileApi.ts";
 import {fetchUserPublishedDocuments} from "../api/feature/DocumentApi.ts";
@@ -9,6 +9,8 @@ import {route} from "preact-router";
 interface PublicProfileProps {
     email?: string; // Automatically injected by preact-router from the URL
 }
+
+//todo add projects where user is co-creator
 
 export function PublicProfile({ email }: PublicProfileProps) {
     const [documents, setDocuments] = useState<Document[]>([]);

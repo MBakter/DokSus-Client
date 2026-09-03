@@ -154,9 +154,6 @@ export function CoverPhotoSection({ serverCover, coverPreviewUrl, onChange, onRe
                 </label>
 
                 <div className="flex justify-between items-center mt-5">
-                    <p className="text-xs text-slate-500">
-                        Prikazuje se u pretraživaču.
-                    </p>
 
                     {hasImage && (
                         <button
