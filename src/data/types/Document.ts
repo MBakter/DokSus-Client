@@ -87,7 +87,6 @@ export interface RestorationData {
 //This is a dropdown (multiple selection + store int times for item + goal of analysis (written after selection))
 export interface Analysis {
     type: string,
-    times: number,
     goal: string,
 }
 

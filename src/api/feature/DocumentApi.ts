@@ -57,7 +57,11 @@ export const uploadCover = async (id: string, file: File) => {
     const formData = new FormData();
     formData.append("cover", file);
 
-    const response = await axiosClient.post(`/documents/${id}/cover`, formData);
+    const response = await axiosClient.post(`/documents/${id}/cover`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
     return response.data;
 };
 
@@ -69,7 +73,11 @@ export const uploadPdf = async (id: string, file: File) => {
     const formData = new FormData();
     formData.append("pdf", file);
 
-    const response = await axiosClient.post(`/documents/${id}/pdf`, formData);
+    const response = await axiosClient.post(`/documents/${id}/pdf`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
     return response.data;
 };
 
@@ -82,7 +90,11 @@ export const uploadVideo = async (id: string, file: File, name: string) => {
     formData.append("video", file);
     formData.append("videoName", name);
 
-    const response = await axiosClient.post(`/documents/${id}/video`, formData);
+    const response = await axiosClient.post(`/documents/${id}/video`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
     return response.data;
 };
 
@@ -97,7 +109,11 @@ export const uploadProjectPhotos = async (id: string, files: File[], names: stri
     files.forEach(file => formData.append("projectPhotos", file));
     names.forEach(name => formData.append("projectPhotoNames", name));
 
-    const response = await axiosClient.post(`/documents/${id}/photos`, formData);
+    const response = await axiosClient.post(`/documents/${id}/photos`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
     return response.data;
 };
 
@@ -112,7 +128,11 @@ export const uploadModels3d = async (id: string, files: File[], names: string[])
     files.forEach(file => formData.append("models3d", file));
     names.forEach(name => formData.append("models3dNames", name));
 
-    const response = await axiosClient.post(`/documents/${id}/models`, formData);
+    const response = await axiosClient.post(`/documents/${id}/models`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
     return response.data;
 };
 

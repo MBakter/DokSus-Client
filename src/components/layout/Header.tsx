@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import {AuthContext} from "../../context/AuthContext.tsx";
 import {IconPlus, IconSignIn, IconSignOut} from "../../assets/Icons.tsx";
+import {TemplateDropdown} from "../feature/TemplateDropdown.tsx";
 
 export function Header() {
     return (
@@ -25,17 +26,29 @@ export function AccountBanner() {
     return (
         <div className="flex items-center justify-between px-8 py-3 bg-slate-100 border-b border-slate-200">
             <nav className="flex items-center gap-6">
-                <a href="/novo" className="text-slate-600 font-medium text-base hover:text-blue-900 transition-colors flex items-center gap-1.5">
-                    <IconPlus className="w-5 h-5 text-inherit" /> Novi dokument
-                </a>
 
-                <a href="/racun" className="text-slate-600 font-medium text-base hover:text-blue-900 transition-colors">
+                {/* Shared background track grouping the primary and secondary actions */}
+                <div className="flex items-center bg-slate-200/60 p-1 rounded-lg border border-slate-200">
+
+                    {/* Elevated white button for the main action */}
+                    <a
+                        href="/novo"
+                        className="flex items-center gap-1.5 px-3.5 mr-1.5 py-1.5 bg-white text-slate-700 hover:text-blue-900 font-semibold text-sm rounded-md shadow-sm border border-slate-200/60 transition-all"
+                    >
+                        <IconPlus className="w-4 h-4 text-slate-700 hover:text-blue-900" />
+                        <span>Novi dokument</span>
+                    </a>
+
+                    <TemplateDropdown />
+                </div>
+
+                <div className="w-px h-6 bg-slate-300" />
+
+                <a href="/racun" className="text-slate-600 font-medium text-sm hover:text-blue-900 transition-colors">
                     Moji projekti
                 </a>
 
-                <div className="w-px h-6 bg-slate-500" />
-
-                <a href="/katalog" className="text-slate-600 font-medium text-base hover:text-blue-900 transition-colors">
+                <a href="/katalog" className="text-slate-600 font-medium text-sm hover:text-blue-900 transition-colors">
                     Katalog oštećenja
                 </a>
             </nav>

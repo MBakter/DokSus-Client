@@ -1,5 +1,5 @@
 import {getDownloadUrl} from "../../../util/Utilities.ts";
-import {IconCheck, IconDownload, IconPDF, IconVideo} from "../../../assets/Icons.tsx";
+import {IconVideo} from "../../../assets/Icons.tsx";
 import {useEffect, useState} from "preact/hooks";
 import Lightbox from "yet-another-react-lightbox";
 import {Zoom} from "yet-another-react-lightbox/plugins";
@@ -12,13 +12,6 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
     return (
         <div className="flex flex-col gap-6">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Multimedija i prilozi</h2>
-
-            <PdfSection
-                pdfFile={fileManager.files.pdf}
-                serverPdf={fileManager.serverPaths.pdf}
-                onChange={fileManager.handleSingleFileChange('pdf')}
-                onRemove={fileManager.handleRemovePdf}
-            />
 
             <PhotosSection
                 files={fileManager.files}
@@ -51,60 +44,6 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
     );
 }
 
-export function PdfSection({pdfFile, serverPdf, onChange, onRemove}: any) {
-    return (
-        <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm">
-            <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2">
-                Glavni Dokument (PDF) <span className="text-red-500">*</span>
-            </h2>
-
-            {/* Increased padding and added gap for a less cramped layout */}
-            <div className="border border-slate-200 rounded-md p-8 bg-slate-50 flex flex-col gap-6">
-
-                {serverPdf && !pdfFile && (
-                    <div className="flex items-center">
-                        <a
-                            href={getDownloadUrl(serverPdf)}
-                            target="_blank"
-                            className="flex items-center gap-2.5 text-base text-blue-700 font-medium hover:text-blue-900 transition-colors group"
-                        >
-                            <IconPDF/>
-                            <span className="group-hover:underline">Preuzmi trenutni PDF</span>
-                            <IconDownload/>
-                        </a>
-                    </div>
-                )}
-
-                <div className="flex flex-wrap items-center gap-4">
-                    <label
-                        className="cursor-pointer inline-flex items-center bg-white border border-slate-300 text-slate-700 font-medium text-base py-2.5 px-6 rounded-md hover:bg-slate-100 hover:border-slate-400 transition-colors shadow-sm">
-                        Odaberi PDF
-                        <input type="file" accept=".pdf" className="hidden" onChange={onChange}/>
-                    </label>
-
-                    {(serverPdf || pdfFile) && (
-                        <button
-                            type="button"
-                            onClick={onRemove}
-                            className="text-red-600 hover:bg-red-50 border border-slate-300 hover:border-red-200 font-medium text-base py-2.5 px-6 rounded-md transition-colors shadow-sm"
-                        >
-                            Ukloni PDF
-                        </button>
-                    )}
-                </div>
-
-                {pdfFile && (
-                    <div
-                        className="flex items-center gap-3 text-base text-emerald-800 font-medium bg-emerald-50 p-4 rounded-md border border-emerald-200">
-                        <IconCheck/>
-                        <span>Pripremljeno za prijenos: <span className="font-bold">{pdfFile.name}</span></span>
-                    </div>
-                )}
-            </div>
-        </section>
-    );
-}
-
 interface PhotosSectionProps {
     files: { projectPhotos: NamedFile[] };
     serverPaths: { projectPhotos: ServerNamedFile[] };
@@ -115,15 +54,16 @@ interface PhotosSectionProps {
     onRemoveServerPhoto: (index: number) => void;
 }
 
-export function PhotosSection({
-                                  files,
-                                  serverPaths,
-                                  onMultipleFilesChange,
-                                  onUpdateFileName,
-                                  onUpdateServerPhotoName,
-                                  onRemoveFile,
-                                  onRemoveServerPhoto
-                              }: PhotosSectionProps) {
+export function PhotosSection(
+    {
+        files,
+        serverPaths,
+        onMultipleFilesChange,
+        onUpdateFileName,
+        onUpdateServerPhotoName,
+        onRemoveFile,
+        onRemoveServerPhoto
+    }: PhotosSectionProps) {
     const ITEMS_PER_PAGE = 3;
 
     const [lightboxIndex, setLightboxIndex] = useState(-1);
