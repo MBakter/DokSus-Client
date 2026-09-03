@@ -18,9 +18,10 @@ export interface AuthResponse {
     user: UserProfile;
 }
 
-export const registerUser = async (data: RegisterRequest): Promise<void> => {
+export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {
     try {
-        await axiosClient.post('/auth/register', data);
+        const response = await axiosClient.post<AuthResponse>('/auth/register', data);
+        return response.data;
     } catch (error: any) {
         throw error;
     }

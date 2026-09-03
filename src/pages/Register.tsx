@@ -1,33 +1,36 @@
-import { useState } from 'preact/hooks';
-import { registerUser } from '../api/AuthApi';
+import {useContext, useState} from 'preact/hooks';
+import {loginUser, registerUser} from '../api/AuthApi';
 import {ErrorCode} from "../api/types/ErrorCode.ts";
+import {AuthContext} from "../context/AuthContext.tsx";
 
 export function useRegister() {
+    const { login } = useContext(AuthContext);
+
     const [name, setName] = useState('');
     const [surname, setSurname] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-
-    // Strongly typed error state
     const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setErrorCode(null);
-        setSuccessMessage(null);
         setIsLoading(true);
 
         try {
+            // 1. Wait for the registration to fully complete and commit to the DB
             await registerUser({ name, surname, email, password });
-            setSuccessMessage('Uspješna registracija! Preusmjeravanje...');
-            setTimeout(() => {
-                window.location.href = '/prijava';
-            }, 1500);
+
+            // 2. Immediately call the login endpoint using the credentials they just typed
+            const response = await loginUser({ email, password });
+
+            // 3. Update AuthContext and redirect
+            login(response.token, response.user);
+            window.location.href = '/';
+
         } catch (err: any) {
             const backendCode = err.response?.data?.errorCode;
-
             setErrorCode(ErrorCode[backendCode as keyof typeof ErrorCode] || ErrorCode.UNKNOWN_ERROR);
         } finally {
             setIsLoading(false);
@@ -39,7 +42,7 @@ export function useRegister() {
         surname, setSurname,
         email, setEmail,
         password, setPassword,
-        errorCode, successMessage, isLoading, handleSubmit
+        errorCode, isLoading, handleSubmit
     };
 }
 
@@ -49,7 +52,7 @@ export function Register() {
         surname, setSurname,
         email, setEmail,
         password, setPassword,
-        errorCode, successMessage, isLoading, handleSubmit
+        errorCode, isLoading, handleSubmit
     } = useRegister();
 
     return (
@@ -75,12 +78,6 @@ export function Register() {
                 {(errorCode === ErrorCode.INTERNAL_ERROR || errorCode === ErrorCode.UNKNOWN_ERROR) && (
                     <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
                         Dogodila se neočekivana pogreška na poslužitelju. Pokušajte ponovno kasnije.
-                    </div>
-                )}
-
-                {successMessage && (
-                    <div className="bg-emerald-50 text-emerald-800 p-3 rounded-md mb-6 text-sm border border-emerald-200 font-medium">
-                        {successMessage}
                     </div>
                 )}
 
