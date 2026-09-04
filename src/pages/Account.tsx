@@ -1,14 +1,16 @@
-import { useContext, useEffect, useState } from 'preact/hooks';
-import { AuthContext } from '../context/AuthContext';
-import { fetchMyDocuments } from '../api/feature/DocumentApi.ts';
+import {useContext, useEffect, useState} from 'preact/hooks';
+import {AuthContext} from '../context/AuthContext';
+import {fetchMyDocuments} from '../api/feature/DocumentApi.ts';
 import type {Document} from '../data/types/Document';
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
 import {route} from "preact-router";
+import {useCategoryReference} from "../data/reference/ReferenceData.ts";
 
 export function Account() {
     const { user } = useContext(AuthContext);
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { categories } = useCategoryReference();
 
     useEffect(() => {
         loadMyDocuments();
@@ -39,7 +41,7 @@ export function Account() {
                 <DocumentCard
                     key={doc.id}
                     document={doc}
-                    showAuthorIcon={false}
+                    categories={categories}
                     onClick={() => route(`/uredi/${doc.id}`)} // Routes to the editor
                 />
             ))}

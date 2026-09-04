@@ -1,14 +1,8 @@
 import {getDownloadUrl} from "../../util/Utilities.ts";
 import {IconImagePlaceholder} from "../../assets/Icons.tsx";
-import {useContext} from "preact/hooks";
+import {useContext, useState} from "preact/hooks";
 import {AuthContext} from "../../context/AuthContext.tsx";
-import type {Document} from "../../data/types/Document.ts";
 
-interface DocumentCardProps {
-    document: Document;
-    showAuthorIcon: boolean;
-    onClick?: () => void;
-}
 
 /**
  * todo
@@ -21,21 +15,98 @@ interface DocumentCardProps {
  *      - it has category, title, upload date
  */
 
-export function DocumentCard({ document, onClick }: DocumentCardProps) {
+export interface DocumentCardProps {
+    document: any;
+    onClick: () => void;
+    categories?: any[]; // Passed from parent
+}
+
+const formatDateObj = (dateRaw: any) => {
+    if (!dateRaw) return '';
+    try {
+        if (typeof dateRaw === 'string') {
+            return new Date(dateRaw).toLocaleDateString('hr-HR');
+        }
+        if (dateRaw.epochSeconds) {
+            const secs = typeof dateRaw.epochSeconds === 'object'
+                ? parseInt(dateRaw.epochSeconds.$numberLong, 10)
+                : parseInt(dateRaw.epochSeconds, 10);
+            return new Date(secs * 1000).toLocaleDateString('hr-HR');
+        }
+    } catch (e) {
+        console.error("Failed to parse date", dateRaw);
+    }
+    return '';
+};
+
+export function DocumentCard({ document, onClick, categories = [] }: DocumentCardProps) {
     const { isAuthenticated } = useContext(AuthContext);
+    const [imageLoaded, setImageLoaded] = useState(false);
 
     const isPublic = document.visibility === 'PUBLIC';
     const visibilityLabel = isPublic ? 'Javno' : 'OKIRU';
     const visibilityTooltip = isPublic ? 'Vidljivo svim posjetiteljima' : 'Vidljivo isključivo prijavljenim korisnicima';
 
-    // Safely extract profiles from the new nested DocumentProfiles object
+    // Co-creators / Creators
     const allProfiles = [
         document.profiles?.creatorProfile,
         ...(document.profiles?.coCreatorProfiles || [])
     ].filter(Boolean);
-
-    // Remove duplicates based on email
     const profiles = Array.from(new Map(allProfiles.map(p => [p.email, p])).values());
+
+    // Mentors
+    const allMentors = document.profiles?.mentorProfiles || [];
+    const mentors = Array.from(new Map(allMentors.map(p => [p.email, p])).values());
+
+    // Determine upload date (prefer publication date if published, fallback to creation)
+    const uploadDateRaw = document.publicationDate || document.creationDate;
+    const uploadDate = formatDateObj(uploadDateRaw);
+
+    // Categories
+    const specialCategories = [
+        'ISTRAZIVACKI_RADOVI_I_REFERENTNI_MATERIJALI',
+        'DIPLOMSKI_I_SEMINARSKI_RADOVI'
+    ];
+    const categoryCode = document.restorationData?.category || 'UNSPECIFIED';
+    const isSpecialCategory = specialCategories.includes(categoryCode);
+
+    // EXACT category mapping you requested
+    const categoryDisplay = categories.find(c => c.id === categoryCode)?.name
+        || categoryCode.replace(/_/g, ' ');
+
+    // Avatar rendering helper with clickable links and overflow protection
+    const renderAvatars = (people: any[], badgeColors: string) => {
+        const maxVisible = 6;
+        const visible = people.slice(0, maxVisible);
+        const excess = people.length - maxVisible;
+
+        return (
+            <div className="flex flex-nowrap gap-1.5 overflow-hidden">
+                {visible.map((person, idx) => {
+                    const initials = `${person.name.charAt(0)}${person.surname.charAt(0)}`.toUpperCase();
+                    return (
+                        <a
+                            key={idx}
+                            href={`/profil/${encodeURIComponent(person.email)}`}
+                            className={`w-6 h-6 shrink-0 flex items-center justify-center border rounded-full text-[9px] font-bold transition-colors ${badgeColors}`}
+                            title={`${person.name} ${person.surname}`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {initials}
+                        </a>
+                    );
+                })}
+                {excess > 0 && (
+                    <div
+                        className="w-6 h-6 shrink-0 flex items-center justify-center bg-slate-50 text-slate-400 border border-slate-200 rounded-full text-[9px] font-bold"
+                        title={`Još ${excess}`}
+                    >
+                        +{excess}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div
@@ -49,7 +120,7 @@ export function DocumentCard({ document, onClick }: DocumentCardProps) {
                 </span>
             )}
 
-            {/* Visibility Tag (Top Right) */}
+            {/* Visibility Tag */}
             <div
                 className={`absolute top-3 right-3 flex items-center opacity-85 gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider z-10 shadow-sm border backdrop-blur-sm transition-colors ${
                     isPublic
@@ -64,58 +135,107 @@ export function DocumentCard({ document, onClick }: DocumentCardProps) {
             {/* Image Container */}
             <div className="h-44 bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center shrink-0">
                 {document.files?.coverPath ? (
-                    <img
-                        src={getDownloadUrl(document.files.coverPath)}
-                        alt={document.restorationData?.name || "Slika predmeta"}
-                        className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
-                    />
+                    <>
+                        {!imageLoaded && (
+                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-100">
+                                <svg className="animate-spin h-6 w-6 text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        )}
+                        <img
+                            src={getDownloadUrl(document.files.coverPath)}
+                            alt=""
+                            onLoad={() => setImageLoaded(true)}
+                            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-in-out group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                        />
+                    </>
                 ) : (
                     <IconImagePlaceholder />
                 )}
             </div>
 
             {/* Card Content */}
-            <div className="p-4 text-xs text-slate-700 flex flex-col flex-1 bg-white z-10">
-                <div className="flex justify-between items-center text-slate-500 mb-2">
-                    <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600">
-                        {document.restorationData?.inventoryNumber}
-                    </span>
-                    <span className="font-medium text-[10px]">{document.restorationData?.date}</span>
-                </div>
+            <div className="p-4 text-xs text-slate-700 flex flex-col flex-1 bg-white z-10 text-left">
 
-                <p className="font-bold text-sm text-slate-900 line-clamp-2 mb-2" title={document.restorationData?.name}>
-                    {document.restorationData?.name}
-                </p>
-
-                <p className="truncate">
-                    <span className="font-semibold text-slate-900">Tehnika:</span> {document.restorationData?.technique}
-                </p>
-
-                {/* Co-Authors Footer */}
-                {isAuthenticated && profiles.length > 0 && (
-                    <div className="mt-auto pt-4 border-t border-slate-100">
-                        <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-2">Autori projekta</p>
-
-                        <div className="flex flex-wrap gap-2">
-                            {profiles.map((profile: any, idx: number) => {
-                                const initials = `${profile.name.charAt(0)}${profile.surname.charAt(0)}`.toUpperCase();
-                                const fullName = `${profile.name} ${profile.surname}`;
-
-                                return (
-                                    <a
-                                        key={idx}
-                                        href={`/profil/${encodeURIComponent(profile.email)}`}
-                                        className="w-7 h-7 flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-300 rounded-full text-[10px] font-bold hover:bg-blue-900 hover:text-white hover:border-blue-900 transition-colors"
-                                        title={`Prikaži profil: ${fullName}`}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        {initials}
-                                    </a>
-                                );
-                            })}
-                        </div>
+                {/* Header Row: Inventory Number & Upload Date */}
+                {(!isSpecialCategory && document.restorationData?.inventoryNumber || uploadDate) && (
+                    <div className="flex justify-between items-start text-slate-500 mb-2 gap-2">
+                        {!isSpecialCategory && document.restorationData?.inventoryNumber ? (
+                            <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 truncate min-w-0" title={document.restorationData.inventoryNumber}>
+                                {document.restorationData.inventoryNumber}
+                            </span>
+                        ) : <span className="min-w-0" />}
+                        {uploadDate && (
+                            <span className="font-medium text-[10px] shrink-0 text-slate-400" title="Datum objave">
+                                {uploadDate}
+                            </span>
+                        )}
                     </div>
                 )}
+
+                {/* Category Label */}
+                {categoryCode !== 'UNSPECIFIED' && (
+                    <div className="mb-1 truncate">
+                        <span className="inline-block px-2  text-slate-500 text-[12px] font-bold tracking-wide truncate max-w-full" title={categoryDisplay}>
+                            {categoryDisplay}
+                        </span>
+                    </div>
+                )}
+
+                {/* Name */}
+                <div className="flex flex-col items-center justify-center min-h-[44px] mb-1.5">
+                    <p className="font-bold text-sm text-slate-900 line-clamp-2 text-center w-full" title={document.restorationData?.name}>
+                        {document.restorationData?.name}
+                    </p>
+                </div>
+
+                {!isSpecialCategory && (
+                    <div className="flex flex-col gap-1 mb-3">
+                        {/* Author */}
+                        {document.restorationData?.author && (
+                            <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.author}>
+                                <span className="font-semibold text-slate-900">Autor:</span> {document.restorationData.author}
+                            </p>
+                        )}
+
+                        {/* Date */}
+                        {document.restorationData?.date && (
+                            <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.date}>
+                                <span className="font-semibold text-slate-900">Datacija:</span> {document.restorationData.date}
+                            </p>
+                        )}
+
+                        {/* Technique */}
+                        {document.restorationData?.technique && (
+                            <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.technique}>
+                                <span className="font-semibold text-slate-900">Tehnika:</span> {document.restorationData.technique}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Footer block */}
+                <div className="mt-auto pt-3 border-t border-slate-100 flex flex-col gap-3">
+
+                    {/* Creators */}
+                    {isAuthenticated && profiles.length > 0 && (
+                        <div>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Autori projekta</p>
+                            {renderAvatars(profiles, "bg-slate-100 text-slate-600 border-slate-300 hover:bg-blue-900 hover:text-white hover:border-blue-900")}
+                        </div>
+                    )}
+
+                    {/* Mentors */}
+                    {isAuthenticated && mentors.length > 0 && (
+                        <div>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Mentori</p>
+                            {renderAvatars(mentors, "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-900 hover:text-white hover:border-blue-900")}
+                        </div>
+                    )}
+
+                </div>
             </div>
         </div>
     );

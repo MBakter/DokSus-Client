@@ -1,14 +1,19 @@
-import {useState, useEffect} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
+import {type NamedFile, type RestorationData, type ServerNamedFile, Visibility} from "../../data/types/Document.ts";
 import {
-    type NamedFile,
-    type RestorationData,
-    type ServerNamedFile,
-    Visibility
-} from "../../data/types/Document.ts";
-import {
-    createDocumentMetadata, deleteCover, deletePdf,
-    fetchDocumentById, syncModels3d, syncProjectPhotos, syncVideo,
-    updateDocumentMetadata, uploadCover, uploadModels3d, uploadPdf, uploadProjectPhotos, uploadVideo
+    createDocumentMetadata,
+    deleteCover,
+    deletePdf,
+    fetchDocumentById,
+    syncModels3d,
+    syncProjectPhotos,
+    syncVideo,
+    updateDocumentMetadata,
+    uploadCover,
+    uploadModels3d,
+    uploadPdf,
+    uploadProjectPhotos,
+    uploadVideo
 } from "../../api/feature/DocumentApi.ts";
 import type {UserProfile} from "../../data/types/UserProfile.ts";
 
@@ -325,7 +330,7 @@ export function useDocumentEditor(id?: string) {
         if (CONDITIONAL_REQUIRED_FIELDS.includes(fieldName)) {
             const selectedCategory = formManager.restorationData.category;
 
-            // If no category is selected or it is in the exempt list, the field is NOT required
+            // If no category is selected, or it is in the exempt list, the field is NOT required
             if (!selectedCategory || EXEMPT_CATEGORIES.includes(selectedCategory)) {
                 return false;
             }
@@ -368,8 +373,9 @@ export function useDocumentEditor(id?: string) {
 
     // Check for PDF in either newly uploaded files or existing server paths
     const hasPdf = Boolean(fileManager.files.pdf) || Boolean(fileManager.serverPaths.pdf?.trim());
+    const hasCoverPhoto = Boolean(fileManager.files.cover) || Boolean(fileManager.serverPaths.cover?.trim());
 
-    const isPublishable = isFormFilled && hasPdf;
+    const isPublishable = isFormFilled && hasPdf && hasCoverPhoto;
     const hasChanges = formManager.hasChanges || fileManager.hasAnyFileChanges;
 
     const handleSave = async (publish: boolean) => {

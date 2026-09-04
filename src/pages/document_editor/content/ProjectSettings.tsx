@@ -125,7 +125,9 @@ export function CoverPhotoSection({ serverCover, coverPreviewUrl, onChange, onRe
         <section className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col h-full">
             <h2 className="text-lg font-bold text-blue-900 mb-6 border-b border-slate-100 pb-2 flex items-center gap-2">
                 Naslovna fotografija
+                <span className="text-red-500 font-bold ml-0.5" title="Obavezno polje">*</span>
             </h2>
+
 
             <div className="flex flex-col flex-grow justify-center w-full">
                 <label className="relative group cursor-pointer block w-full max-w-[200px] mx-auto aspect-square rounded-xl overflow-hidden border-2 border-dashed border-slate-300 hover:border-blue-400 bg-slate-50 transition-all duration-300 shadow-inner">

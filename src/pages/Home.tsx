@@ -1,5 +1,5 @@
-import {useState, useEffect} from 'preact/hooks';
-import { route } from 'preact-router';
+import {useEffect, useState} from 'preact/hooks';
+import {route} from 'preact-router';
 import type {Document} from '../data/types/Document.ts';
 import {fetchDocuments} from "../api/feature/DocumentApi.ts";
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
@@ -129,7 +129,7 @@ export function Home({ url }: HomeProps) {
                         <DocumentCard
                             key={doc.id}
                             document={doc}
-                            showAuthorIcon={true}
+                            categories={categories}
                             onClick={() => route(`/dokument/${doc.id}`)}
                         />
                     ))}
