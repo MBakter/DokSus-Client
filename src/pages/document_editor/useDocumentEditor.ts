@@ -3,6 +3,7 @@ import {type NamedFile, type RestorationData, type ServerNamedFile, Visibility} 
 import {
     createDocumentMetadata,
     deleteCover,
+    deleteDocument,
     deletePdf,
     fetchDocumentById,
     syncAdditionalPdfs,
@@ -563,6 +564,24 @@ export function useDocumentEditor(id?: string) {
         }
     };
 
+    const handleDelete = async () => {
+        if (!documentId) return;
+
+        const isConfirmed = window.confirm(
+            "Jeste li sigurni da želite obrisati ovaj nacrt? Ova akcija je nepovratna."
+        );
+
+        if (!isConfirmed) return;
+
+        try {
+            await deleteDocument(documentId);
+            window.location.href = '/racun';
+        } catch (error) {
+            console.error("Failed to delete document", error);
+            alert("Dogodila se greška prilikom brisanja nacrta.");
+        }
+    };
+
     return {
         documentId,
         isSaving,
@@ -570,6 +589,7 @@ export function useDocumentEditor(id?: string) {
         isPublishable,
         hasChanges,
         handleSave,
+        handleDelete,
 
         // Expose the perfectly separated namespaces to the UI
         restorationData: formManager.restorationData,

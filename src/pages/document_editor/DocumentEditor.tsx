@@ -3,7 +3,7 @@ import {useEffect, useState} from "preact/hooks";
 import {RestorationDataFields,} from "./content/RestorationDataFields.tsx";
 import {ProjectSettings} from "./content/ProjectSettings.tsx";
 import {Attachments} from "./content/Attachments.tsx";
-import {IconCheck, IconDownload, IconPDF} from "../../assets/Icons.tsx";
+import {IconCheck, IconDownload, IconPDF, IconTrash} from "../../assets/Icons.tsx";
 import {getDownloadUrl} from "../../util/Utilities.ts";
 
 interface DocumentEditorProps {
@@ -58,6 +58,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 <Attachments
                     fileManager={editor.fileManager}
                 />
+
+                <DeleteDocument
+                    isPublished={editor.metadata.isPublished}
+                    documentId={editor.documentId}
+                    handleDelete={editor.handleDelete}
+                    />
             </div>
         </div>
     );
@@ -199,5 +205,22 @@ export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
                 )}
             </div>
         </section>
+    );
+}
+
+export function DeleteDocument({ isPublished, documentId, handleDelete }: any) {
+    if (isPublished || !documentId) return null;
+
+    return (
+        <div className="flex border-t border-slate-200 pt-10 mt-4">
+            <button
+                onClick={handleDelete}
+                className="flex items-center gap-2 px-6 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm"
+                title="Trajno obriši ovaj nacrt"
+            >
+                <IconTrash className={"text-red-600 hover:text-red-700 transition-colors w-6 h-6"}/>
+                Obriši nacrt
+            </button>
+        </div>
     );
 }

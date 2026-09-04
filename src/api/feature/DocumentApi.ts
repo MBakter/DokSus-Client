@@ -52,6 +52,10 @@ export const updateDocumentMetadata = async (id: string, data: any) => {
     return response.data;
 };
 
+export const deleteDocument = async (id: string) => {
+    await axiosClient.delete(`/documents/${id}`);
+};
+
 /**
  * This is only for professors to change the creator of a document
  */
