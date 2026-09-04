@@ -1,4 +1,4 @@
-import {getDownloadUrl} from "../../util/Utilities.ts";
+import {formatDateObj, getDownloadUrl} from "../../util/Utilities.ts";
 import {IconImagePlaceholder} from "../../assets/Icons.tsx";
 import {useContext, useState} from "preact/hooks";
 import {AuthContext} from "../../context/AuthContext.tsx";
@@ -21,26 +21,8 @@ export interface DocumentCardProps {
     categories?: any[]; // Passed from parent
 }
 
-const formatDateObj = (dateRaw: any) => {
-    if (!dateRaw) return '';
-    try {
-        if (typeof dateRaw === 'string') {
-            return new Date(dateRaw).toLocaleDateString('hr-HR');
-        }
-        if (dateRaw.epochSeconds) {
-            const secs = typeof dateRaw.epochSeconds === 'object'
-                ? parseInt(dateRaw.epochSeconds.$numberLong, 10)
-                : parseInt(dateRaw.epochSeconds, 10);
-            return new Date(secs * 1000).toLocaleDateString('hr-HR');
-        }
-    } catch (e) {
-        console.error("Failed to parse date", dateRaw);
-    }
-    return '';
-};
-
-export function DocumentCard({ document, onClick, categories = [] }: DocumentCardProps) {
-    const { isAuthenticated } = useContext(AuthContext);
+export function DocumentCard({document, onClick, categories = []}: DocumentCardProps) {
+    const {isAuthenticated} = useContext(AuthContext);
     const [imageLoaded, setImageLoaded] = useState(false);
 
     const isPublic = document.visibility === 'PUBLIC';
@@ -63,14 +45,8 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
     const uploadDate = formatDateObj(uploadDateRaw);
 
     // Categories
-    const specialCategories = [
-        'ISTRAZIVACKI_RADOVI_I_REFERENTNI_MATERIJALI',
-        'DIPLOMSKI_I_SEMINARSKI_RADOVI'
-    ];
     const categoryCode = document.restorationData?.category || 'UNSPECIFIED';
-    const isSpecialCategory = specialCategories.includes(categoryCode);
 
-    // EXACT category mapping you requested
     const categoryDisplay = categories.find(c => c.id === categoryCode)?.name
         || categoryCode.replace(/_/g, ' ');
 
@@ -115,7 +91,8 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
         >
             {/* Draft Status */}
             {!document.isPublished && (
-                <span className="absolute top-3 left-3 bg-yellow-100 text-yellow-800 border border-yellow-300 text-[10px] px-2 py-1 uppercase tracking-wider font-bold rounded-sm z-10 shadow-sm">
+                <span
+                    className="absolute top-3 left-3 bg-yellow-100 text-yellow-800 border border-yellow-300 text-[10px] px-2 py-1 uppercase tracking-wider font-bold rounded-sm z-10 shadow-sm">
                     U izradi
                 </span>
             )}
@@ -133,14 +110,18 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
             </div>
 
             {/* Image Container */}
-            <div className="h-44 bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center shrink-0">
+            <div
+                className="h-44 bg-slate-50 border-b border-slate-100 overflow-hidden relative flex items-center justify-center shrink-0">
                 {document.files?.coverPath ? (
                     <>
                         {!imageLoaded && (
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-100">
-                                <svg className="animate-spin h-6 w-6 text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <svg className="animate-spin h-6 w-6 text-slate-300" xmlns="http://www.w3.org/2000/svg"
+                                     fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor"
+                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             </div>
                         )}
@@ -152,7 +133,7 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
                         />
                     </>
                 ) : (
-                    <IconImagePlaceholder />
+                    <IconImagePlaceholder/>
                 )}
             </div>
 
@@ -160,13 +141,15 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
             <div className="p-4 text-xs text-slate-700 flex flex-col flex-1 bg-white z-10 text-left">
 
                 {/* Header Row: Inventory Number & Upload Date */}
-                {(!isSpecialCategory && document.restorationData?.inventoryNumber || uploadDate) && (
+                {(document.restorationData?.inventoryNumber || uploadDate) && (
                     <div className="flex justify-between items-start text-slate-500 mb-2 gap-2">
-                        {!isSpecialCategory && document.restorationData?.inventoryNumber ? (
-                            <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 truncate min-w-0" title={document.restorationData.inventoryNumber}>
+                        {document.restorationData?.inventoryNumber ? (
+                            <span
+                                className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 truncate min-w-0"
+                                title={document.restorationData.inventoryNumber}>
                                 {document.restorationData.inventoryNumber}
                             </span>
-                        ) : <span className="min-w-0" />}
+                        ) : <span className="min-w-0"/>}
                         {uploadDate && (
                             <span className="font-medium text-[10px] shrink-0 text-slate-400" title="Datum objave">
                                 {uploadDate}
@@ -178,7 +161,9 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
                 {/* Category Label */}
                 {categoryCode !== 'UNSPECIFIED' && (
                     <div className="mb-1 truncate">
-                        <span className="inline-block px-2  text-slate-500 text-[12px] font-bold tracking-wide truncate max-w-full" title={categoryDisplay}>
+                        <span
+                            className="inline-block px-2  text-slate-500 text-[12px] font-bold tracking-wide truncate max-w-full"
+                            title={categoryDisplay}>
                             {categoryDisplay}
                         </span>
                     </div>
@@ -186,35 +171,38 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
 
                 {/* Name */}
                 <div className="flex flex-col items-center justify-center min-h-[44px] mb-1.5">
-                    <p className="font-bold text-sm text-slate-900 line-clamp-2 text-center w-full" title={document.restorationData?.name}>
+                    <p className="font-bold text-sm text-slate-900 line-clamp-2 text-center w-full"
+                       title={document.restorationData?.name}>
                         {document.restorationData?.name}
                     </p>
                 </div>
 
-                {!isSpecialCategory && (
-                    <div className="flex flex-col gap-1 mb-3">
-                        {/* Author */}
-                        {document.restorationData?.author && (
-                            <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.author}>
-                                <span className="font-semibold text-slate-900">Autor:</span> {document.restorationData.author}
-                            </p>
-                        )}
 
-                        {/* Date */}
-                        {document.restorationData?.date && (
-                            <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.date}>
-                                <span className="font-semibold text-slate-900">Datacija:</span> {document.restorationData.date}
-                            </p>
-                        )}
+                <div className="flex flex-col gap-1 mb-3">
+                    {/* Author */}
+                    {document.restorationData?.author && (
+                        <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.author}>
+                            <span
+                                className="font-semibold text-slate-900">Autor:</span> {document.restorationData.author}
+                        </p>
+                    )}
 
-                        {/* Technique */}
-                        {document.restorationData?.technique && (
-                            <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.technique}>
-                                <span className="font-semibold text-slate-900">Tehnika:</span> {document.restorationData.technique}
-                            </p>
-                        )}
-                    </div>
-                )}
+                    {/* Date */}
+                    {document.restorationData?.date && (
+                        <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.date}>
+                            <span
+                                className="font-semibold text-slate-900">Datacija:</span> {document.restorationData.date}
+                        </p>
+                    )}
+
+                    {/* Technique */}
+                    {document.restorationData?.technique && (
+                        <p className="text-[11px] text-slate-600 truncate" title={document.restorationData.technique}>
+                            <span
+                                className="font-semibold text-slate-900">Tehnika:</span> {document.restorationData.technique}
+                        </p>
+                    )}
+                </div>
 
                 {/* Footer block */}
                 <div className="mt-auto pt-3 border-t border-slate-100 flex flex-col gap-3">
@@ -222,7 +210,8 @@ export function DocumentCard({ document, onClick, categories = [] }: DocumentCar
                     {/* Creators */}
                     {isAuthenticated && profiles.length > 0 && (
                         <div>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Autori projekta</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Autori
+                                projekta</p>
                             {renderAvatars(profiles, "bg-slate-100 text-slate-600 border-slate-300 hover:bg-blue-900 hover:text-white hover:border-blue-900")}
                         </div>
                     )}
