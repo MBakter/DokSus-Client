@@ -6,7 +6,7 @@ import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
 import {formatDateObj, getDownloadUrl, getInitials} from "../util/Utilities.ts";
-import {IconCube, IconImagePlaceholder, IconPDF} from "../assets/Icons.tsx";
+import {IconCube, IconDownload, IconImagePlaceholder, IconPDF} from "../assets/Icons.tsx";
 import {AuthContext} from "../context/AuthContext.tsx";
 import {useCategoryReference} from "../data/reference/ReferenceData.ts";
 import type {Document} from "../data/types/Document.ts";
@@ -96,6 +96,7 @@ export function DocumentViewer({id}: { id: string }) {
     const video = files?.video;
     const projectPhotos = files?.projectPhotos;
     const models3d = files?.models3d;
+    const additionalPdfs = files?.additionalPdfs;
 
     const hasMultimedia = pdfPath || (projectPhotos && projectPhotos.length > 0) || (models3d && models3d.length > 0) || video;
 
@@ -115,6 +116,7 @@ export function DocumentViewer({id}: { id: string }) {
                 <HeroSection
                     restorationData={restorationData}
                     coverPath={coverPath}
+                    pdfPath={pdfPath}
                     authors={uniqueAuthors}
                     mentors={uniqueMentors}
                     creatorEmail={creatorEmail}
@@ -138,12 +140,11 @@ export function DocumentViewer({id}: { id: string }) {
                 {/* Multimedia Section */}
                 {hasMultimedia && (
                     <div className="bg-white p-8 rounded-md shadow-sm border border-slate-300 flex flex-col gap-10">
-                        <h3 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-4">Multimedija i
-                            Prilozi</h3>
-                        <PdfSection pdfPath={pdfPath}/>
-                        <PhotoGallerySection projectPhotos={projectPhotos}/>
-                        <ModelSection models3d={models3d}/>
-                        <VideoSection video={video}/>
+                        <h3 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-4">Multimedija i Prilozi</h3>
+                        <PdfSection pdfPath={pdfPath} additionalPdfs={additionalPdfs} />
+                        <PhotoGallerySection projectPhotos={projectPhotos} />
+                        <ModelSection models3d={models3d} />
+                        <VideoSection video={video} />
                     </div>
                 )}
             </div>
@@ -169,6 +170,7 @@ const HeroSection = (
     {
         restorationData,
         coverPath,
+        pdfPath, // Added pdfPath to props
         authors,
         mentors,
         creatorEmail,
@@ -215,8 +217,8 @@ const HeroSection = (
             {/* Content Split: Image Left, Data Right */}
             <div className="flex flex-col lg:flex-row gap-8">
 
-                {/* 1. Rectangle Picture */}
-                <div className="w-full lg:w-5/12 shrink-0">
+                {/* 1. Cover Picture & Main PDF Download */}
+                <div className="w-full lg:w-5/12 shrink-0 flex flex-col gap-4">
                     <div
                         className="aspect-[4/3] w-full bg-slate-100 rounded-md overflow-hidden relative border border-slate-200 shadow-sm">
                         {coverPath ? (
@@ -231,6 +233,27 @@ const HeroSection = (
                             </div>
                         )}
                     </div>
+
+                    {/* Main PDF Download Button under Image */}
+                    {pdfPath && (
+                        <a
+                            href={getDownloadUrl(pdfPath)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-full flex items-center justify-between bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-300 p-4 rounded-md shadow-sm transition-all group mt-1"
+                        >
+                            <div className="flex items-center gap-3">
+                                <IconPDF className="w-6 h-6 text-red-500" />
+                                <div className="flex flex-col text-left">
+                                    <span className="text-sm font-bold text-slate-800 group-hover:text-blue-700 transition-colors">Cjeloviti PDF dokument</span>
+                                    <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Kliknite za preuzimanje</span>
+                                </div>
+                            </div>
+                            <div className="bg-slate-100 group-hover:bg-blue-100 p-2.5 rounded-full transition-colors">
+                                <IconDownload className="w-5 h-5 text-slate-500 group-hover:text-blue-700 transition-colors" />
+                            </div>
+                        </a>
+                    )}
                 </div>
 
                 {/* 2. Metadata Next to Picture */}
@@ -278,7 +301,7 @@ const HeroSection = (
                         )}
                     </div>
 
-                    {/* Main Meta Grid (No more special category checks!) */}
+                    {/* Main Meta Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6 mb-8">
                         <DetailItem label="Autor / Umjetnik" value={restorationData?.author}/>
                         <DetailItem label="Datacija predmeta" value={restorationData?.date}/>
@@ -481,19 +504,45 @@ export const KeywordsSection = ({restorationData}: { restorationData: any }) => 
     );
 };
 
-const PdfSection = ({pdfPath}: { pdfPath: string | null | undefined }) => {
-    if (!pdfPath) return null;
+interface PdfSectionProps {
+    additionalPdfs?: any[];
+}
+
+export const PdfSection = ({ additionalPdfs = [] }: PdfSectionProps) => {
+    if (additionalPdfs.length === 0) return null;
+
     return (
         <div>
-            <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-widest mb-4">Dokumentacija</h4>
-            <a
-                href={getDownloadUrl(pdfPath)}
-                target="_blank"
-                className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-blue-900 border border-slate-300 px-6 py-4 rounded-md font-bold transition-colors shadow-sm"
-            >
-                <IconPDF/>
-                Preuzmi cjeloviti PDF dokument
-            </a>
+            <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">
+                Dodatni prilozi
+            </h4>
+
+            <div className="flex flex-col gap-3">
+                {additionalPdfs.map((pdf: any, index: number) => (
+                    <a
+                        key={index}
+                        href={getDownloadUrl(pdf.path)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-md hover:border-blue-400 hover:shadow-sm transition-all group"
+                    >
+                        <div className="flex items-center gap-4 overflow-hidden pr-4">
+                            <IconPDF className="w-6 h-6 text-red-500 shrink-0" />
+                            <span className="text-sm font-semibold text-slate-700 group-hover:text-blue-700 truncate transition-colors" title={pdf.name}>
+                                {pdf.name}
+                            </span>
+                        </div>
+
+                        {/* Clean, integrated indicator instead of a fake inner button */}
+                        <div className="flex items-center gap-2 shrink-0 text-slate-400 group-hover:text-blue-600 transition-colors pl-2 border-l border-slate-100 group-hover:border-blue-100">
+                            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:block">
+                                Preuzmi
+                            </span>
+                            <IconDownload className="w-5 h-5" />
+                        </div>
+                    </a>
+                ))}
+            </div>
         </div>
     );
 };
