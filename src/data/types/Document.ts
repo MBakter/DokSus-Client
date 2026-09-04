@@ -49,12 +49,11 @@ export interface DocumentProfiles {
     mentorProfiles?: UserProfile[];
 }
 
-//todo change labels in UI according to comments
 export interface RestorationData {
     category: string;
     inventoryNumber: string;        // Invenatarni broj OKIRU
     name: string;                   // Naslov/Naziv todo: rename to title
-    group: string;                  // Zbirka/grupa todo: the logic behind it. Decide type
+    group: string;                  // Zbirka/grupa
     author: string;                 // Autor
     date: string;                   // Datacija
     material: string;               // Materijal

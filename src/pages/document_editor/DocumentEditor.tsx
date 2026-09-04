@@ -216,10 +216,10 @@ export function DeleteDocument({ isPublished, documentId, handleDelete }: any) {
             <button
                 onClick={handleDelete}
                 className="flex items-center gap-2 px-6 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm"
-                title="Trajno obriši ovaj nacrt"
+                title="Trajno obriši ovu skicu"
             >
                 <IconTrash className={"text-red-600 hover:text-red-700 transition-colors w-6 h-6"}/>
-                Obriši nacrt
+                Obriši skicu
             </button>
         </div>
     );

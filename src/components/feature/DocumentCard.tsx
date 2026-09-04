@@ -4,17 +4,6 @@ import {useContext, useState} from "preact/hooks";
 import {AuthContext} from "../../context/AuthContext.tsx";
 
 
-/**
- * todo
- *   These fields are to be updated
- *      - add author (the og one) under the title
- *      - change date to upload date
- *      - add date next to author
- *      - category on the bottom
- *   The last two category projects are different
- *      - it has category, title, upload date
- */
-
 export interface DocumentCardProps {
     document: any;
     onClick: () => void;

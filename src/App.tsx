@@ -1,6 +1,6 @@
-import { AuthProvider } from './context/AuthContext';
-import { Layout } from './components/layout/Layout';
-import { Home } from './pages/Home';
+import {AuthProvider} from './context/AuthContext';
+import {Layout} from './components/layout/Layout';
+import {Home} from './pages/Home';
 import Router, {Route} from "preact-router";
 import {Login} from "./pages/Login.tsx";
 import {Register} from "./pages/Register.tsx";
@@ -8,6 +8,7 @@ import {Account} from "./pages/Account.tsx";
 import {PublicProfile} from "./pages/PublicProfile.tsx";
 import {DocumentEditor} from "./pages/document_editor/DocumentEditor.tsx";
 import {DocumentViewer} from "./pages/DocumentViewer.tsx";
+import {GroupPage} from "./pages/Group.tsx";
 
 export function App() {
     return (
@@ -22,6 +23,7 @@ export function App() {
                     <Route path="/novo" component={DocumentEditor} />
                     <Route path="/uredi/:id" component={DocumentEditor} />
                     <Route path="/dokument/:id" component={DocumentViewer} />
+                    <Route path="/group/:id" component={GroupPage} />
                 </Router>
             </Layout>
         </AuthProvider>

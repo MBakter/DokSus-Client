@@ -9,13 +9,13 @@ interface HomeProps {
     url?: string; // Injected automatically by preact-router
 }
 
-export function Home({ url }: HomeProps) {
+export function Home({url}: HomeProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [totalPages, setTotalPages] = useState<number>(1);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isCategoriesOpen, setIsCategoriesOpen] = useState<boolean>(true);
 
-    const { categories } = useCategoryReference();
+    const {categories} = useCategoryReference();
 
     const searchParams = new URLSearchParams(url?.split('?')[1] || typeof window !== 'undefined' ? window.location.search : '');
     const searchQuery = searchParams.get('search') || '';
@@ -55,7 +55,7 @@ export function Home({ url }: HomeProps) {
         const params = new URLSearchParams(searchParams.toString());
 
         if (categoryName === 'UNSPECIFIED') {
-            params.delete('category'); // Keep URL clean for the default state
+            params.delete('category');
         } else {
             params.set('category', categoryName);
         }
@@ -79,6 +79,17 @@ export function Home({ url }: HomeProps) {
     return (
         <div className="w-full flex flex-col items-center pb-16 bg-slate-50 min-h-screen">
 
+            {/* Filter Panel Background Wrapper */}
+            <div className="w-full max-w-6xl px-4 lg:px-0 mt-8 mb-2">
+                <div className="bg-slate-100 border border-slate-200 p-4 rounded-lg flex flex-col gap-2">
+                    <span className="text-xs font-medium text-slate-400 tracking-wider">Filteri</span>
+                    <div className="flex items-center justify-start gap-4">
+                        <GroupDropdownFilter/>
+                        {/* Add future filters here */}
+                    </div>
+                </div>
+            </div>
+
             {/* Interactive Title Header / Divider */}
             <div
                 className="w-full max-w-6xl flex items-center mt-8 mb-6 cursor-pointer group"
@@ -86,7 +97,8 @@ export function Home({ url }: HomeProps) {
                 title={isCategoriesOpen ? "Zatvori kategorije" : "Otvori kategorije"}
             >
                 <div className="flex-1 border-t border-slate-300 transition-colors group-hover:border-blue-400"></div>
-                <div className="px-4 text-slate-700 font-bold uppercase tracking-widest text-sm flex items-center gap-2 transition-colors group-hover:text-blue-700 select-none">
+                <div
+                    className="px-4 text-slate-700 font-bold uppercase tracking-widest text-sm flex items-center gap-2 transition-colors group-hover:text-blue-700 select-none">
                     <span>{categoryTitle}</span>
                     <span
                         className={`text-[10px] transform transition-transform duration-300 ease-in-out ${isCategoriesOpen ? 'rotate-180' : 'rotate-0'}`}
@@ -131,14 +143,18 @@ export function Home({ url }: HomeProps) {
             {/* Documents Grid */}
             {isLoading ? (
                 <div className="py-20 flex flex-col items-center justify-center gap-4 text-slate-500">
-                    <svg className="animate-spin h-8 w-8 text-blue-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg className="animate-spin h-8 w-8 text-blue-900" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     <span className="font-medium">Učitavanje...</span>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-6xl px-4 lg:px-0">
+                <div
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-6xl px-4 lg:px-0">
                     {documents.map((doc: Document) => (
                         <DocumentCard
                             key={doc.id}
@@ -148,7 +164,7 @@ export function Home({ url }: HomeProps) {
                         />
                     ))}
                     {documents.length === 0 && (
-                        <p className="col-span-full text-center text-slate-500 italic py-10 border-2 border-dashed border-slate-200 rounded-md bg-white">
+                        <p className="col-span-full text-center text-slate-500 italic py-10  rounded-md ">
                             Nema pronađenih dokumenata za odabranu kategoriju.
                         </p>
                     )}
@@ -168,7 +184,7 @@ export function Home({ url }: HomeProps) {
                     </button>
 
                     <div className="flex items-center gap-1.5">
-                        {Array.from({ length: totalPages }, (_, i) => (
+                        {Array.from({length: totalPages}, (_, i) => (
                             <button
                                 key={i}
                                 onClick={() => changePage(i)}
@@ -197,20 +213,20 @@ export function Home({ url }: HomeProps) {
     );
 }
 
-export function GroupSearchAutocomplete() {
-    const { groups, isLoading } = useGroupReference();
+export function GroupDropdownFilter() {
+    const {groups, isLoading} = useGroupReference();
     const [searchTerm, setSearchTerm] = useState('');
     const [isOpen, setIsOpen] = useState(false);
 
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         }
+
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
@@ -219,54 +235,75 @@ export function GroupSearchAutocomplete() {
         groupName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    return (
-        <div ref={wrapperRef} className="relative w-full max-w-lg z-20">
-            <div className="relative">
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => {
-                        setSearchTerm((e.target as HTMLInputElement).value);
-                        setIsOpen(true);
-                    }}
-                    onFocus={() => setIsOpen(true)}
-                    placeholder={isLoading ? "Učitavanje zbirki..." : "Pretraži zbirke i grupe..."}
-                    disabled={isLoading}
-                    className="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-md pl-10 pr-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
-                />
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                </div>
-            </div>
+    if (isLoading || groups.length === 0) return null;
 
-            {isOpen && searchTerm.trim() !== '' && !isLoading && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden max-h-60 overflow-y-auto">
-                    {filteredGroups.length > 0 ? (
-                        <div className="flex flex-col">
-                            {filteredGroups.map((groupName, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => {
-                                        setIsOpen(false);
-                                        // Encoding the group name so it safely passes through the router URL
-                                        route(`/group/${encodeURIComponent(groupName)}`);
-                                    }}
-                                    className="text-left px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-900 border-b border-slate-100 last:border-0 transition-colors"
-                                >
-                                    {groupName}
-                                </button>
-                            ))}
+    return (
+        <div ref={wrapperRef} className="flex items-center gap-3 relative z-30">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Zbirke/grupe</span>
+
+            <div className="relative">
+                {/* The button */}
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-80 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 text-sm font-medium px-4 py-2 rounded-md flex items-center justify-between transition-all"
+                >
+                    <span className="text-slate-600 font-medium">Pretraži grupe...</span>
+                    <span
+                        className={`text-[10px] text-slate-400 transform transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>▼
+                    </span>
+                </button>
+
+                {/* Dropdown Box */}
+                {isOpen && (
+                    <div
+                        className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-md shadow-xl overflow-hidden p-3 flex flex-col gap-3 z-40">
+                        {/* Slightly darker search bar with search icon */}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm((e.target as HTMLInputElement).value)}
+                                placeholder="Pretraži grupe..."
+                                autoFocus
+                                className="w-full bg-slate-100 border border-slate-200 text-slate-800 text-sm rounded pl-9 pr-3 py-2 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors font-medium placeholder:text-slate-400"
+                            />
+                            <div
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                     strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="px-4 py-4 text-sm text-slate-500 text-center italic">
-                            Nema pronađenih zbirki za "{searchTerm}"
+
+                        {/* Results List with max height */}
+                        <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5 pr-1">
+                            {filteredGroups.length > 0 ? (
+                                filteredGroups.map((groupName, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            setSearchTerm('');
+                                            route(`/group/${encodeURIComponent(groupName)}`);
+                                        }}
+                                        className="text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded transition-colors truncate font-medium"
+                                    >
+                                        {groupName}
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="py-4 text-sm text-slate-400 text-center italic">
+                                    No results for "{searchTerm}"
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

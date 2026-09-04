@@ -568,7 +568,7 @@ export function useDocumentEditor(id?: string) {
         if (!documentId) return;
 
         const isConfirmed = window.confirm(
-            "Jeste li sigurni da želite obrisati ovaj nacrt? Ova akcija je nepovratna."
+            "Jeste li sigurni da želite obrisati ovu skicu? Ova akcija je nepovratna."
         );
 
         if (!isConfirmed) return;

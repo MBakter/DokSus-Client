@@ -1,10 +1,7 @@
 import {type RestorationData} from "../../../data/types/Document.ts";
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {IconChevronDown, IconPlus, IconTrash, IconX} from "../../../assets/Icons.tsx";
-import {
-    useAnalysisTypeReference,
-    useCategoryReference
-} from "../../../data/reference/ReferenceData.ts";
+import {useAnalysisTypeReference, useCategoryReference} from "../../../data/reference/ReferenceData.ts";
 import {GroupSuggestionInput} from "./components/GroupSuggestionInput.tsx";
 
 export interface RestorationDataProps {
@@ -139,7 +136,7 @@ export function BasicDataSection({restorationData, onChange, checkRequired}: any
                         type="text" name="inventoryNumber"
                         value={restorationData.inventoryNumber}
                         onChange={textHandler('inventoryNumber')}
-                        placeholder="npr. OKIRU-2023-01"
+                        placeholder="npr. 430"
                         className="border border-slate-300 rounded-md p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
                     />
                 </div>
@@ -746,12 +743,14 @@ export function WorksSection({ restorationData, onChange, checkRequired }: any) 
 
             {/* Input area for new work */}
             <div className="flex flex-col gap-3 bg-slate-50 p-5 rounded-md border border-slate-200 shadow-sm">
-                <h4 className="text-sm font-semibold text-slate-700 mb-1">Dodaj postupak</h4>
+                <h4 className="text-sm font-semibold text-slate-700 mb-1">
+                    Dodaj postupak
+                </h4>
 
                 <textarea
                     value={workName}
                     onChange={(e) => setWorkName((e.currentTarget as HTMLTextAreaElement).value)}
-                    placeholder="Opis provedenog rada (npr. Uklanjanje površinske nečistoće)..."
+                    placeholder="Naziv provedenog postupka (npr. Uklanjanje površinske nečistoće)..."
                     rows={3}
                     className="w-full border border-slate-300 rounded-md p-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all resize-none bg-white overflow-y-auto"
                 />

@@ -1,7 +1,7 @@
-import { useContext, useEffect, useState } from 'preact/hooks';
-import { route } from 'preact-router';
+import {useContext, useEffect, useState} from 'preact/hooks';
+import {route} from 'preact-router';
 import {AuthContext} from "../../context/AuthContext.tsx";
-import {IconPlus, IconSignIn, IconSignOut} from "../../assets/Icons.tsx";
+import {IconPlus, IconSearch, IconSignIn, IconSignOut} from "../../assets/Icons.tsx";
 import {TemplateDropdown} from "../feature/TemplateDropdown.tsx";
 
 export function Header() {
@@ -115,7 +115,7 @@ export function TopBar() {
                 <div className="relative flex items-center ml-4">
                     <input
                         type="text"
-                        placeholder="Pretraži arhivu..."
+                        placeholder="Pretraži..."
                         value={localInput}
                         onInput={(e) => setLocalInput((e.target as HTMLInputElement).value)}
                         onKeyDown={handleKeyDown}
@@ -126,10 +126,7 @@ export function TopBar() {
                         className="absolute right-3 text-slate-400 hover:text-blue-900 transition-colors p-1"
                         title="Pretraži"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
+                        <IconSearch/>
                     </button>
                 </div>
             </div>

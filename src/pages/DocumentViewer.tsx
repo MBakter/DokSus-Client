@@ -10,6 +10,7 @@ import {IconCube, IconDownload, IconImagePlaceholder, IconPDF} from "../assets/I
 import {AuthContext} from "../context/AuthContext.tsx";
 import {useCategoryReference} from "../data/reference/ReferenceData.ts";
 import type {Document} from "../data/types/Document.ts";
+import {route} from "preact-router";
 
 export function useDocumentViewer(id: string) {
     const [document, setDocument] = useState<Document | null>(null); // Replace 'any' with 'Document' interface
@@ -141,7 +142,7 @@ export function DocumentViewer({id}: { id: string }) {
                 {hasMultimedia && (
                     <div className="bg-white p-8 rounded-md shadow-sm border border-slate-300 flex flex-col gap-10">
                         <h3 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-4">Multimedija i Prilozi</h3>
-                        <PdfSection pdfPath={pdfPath} additionalPdfs={additionalPdfs} />
+                        <PdfSection additionalPdfs={additionalPdfs} />
                         <PhotoGallerySection projectPhotos={projectPhotos} />
                         <ModelSection models3d={models3d} />
                         <VideoSection video={video} />
@@ -163,6 +164,25 @@ const DetailItem = ({label, value, fullWidth = false}: { label: string; value: s
         </div>
     );
 };
+
+export function LinkItem({ label, value }: { label: string; value: string }) {
+    if (!value || value.trim() === '') return null;
+    return (
+        <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</span>
+            <a
+                href={`/group/${encodeURIComponent(value)}`}
+                onClick={(e) => {
+                    e.preventDefault();
+                    route(`/group/${encodeURIComponent(value)}`);
+                }}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline leading-relaxed break-words"
+            >
+                {value}
+            </a>
+        </div>
+    );
+}
 
 // --- Sections ---
 
@@ -305,9 +325,9 @@ const HeroSection = (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6 mb-8">
                         <DetailItem label="Autor / Umjetnik" value={restorationData?.author}/>
                         <DetailItem label="Datacija predmeta" value={restorationData?.date}/>
-                        <DetailItem label="Zbirka / Grupa" value={restorationData?.group}/>
+                        <LinkItem label="Zbirka / Grupa" value={restorationData?.group}/>
                         <DetailItem label="Izvorni smještaj / Lokacija" value={restorationData?.location}/>
-                        <DetailItem label="Trenutni smještaj / Depo" value={restorationData?.storage}/>
+                        <DetailItem label="Trenutni smještaj / Lokacija" value={restorationData?.storage}/>
                     </div>
 
                     <div className="border-t border-slate-100 mb-6"></div>
@@ -427,7 +447,9 @@ export const WorksSection = ({restorationData}: { restorationData: any }) => {
                     <div key={index}
                          className="flex flex-col md:flex-row md:items-start gap-4 p-5 rounded-md border border-slate-200 bg-slate-50/50">
                         <div className="flex-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Opis radova</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
+                                Naziv postupka
+                            </span>
                             <p className="text-sm font-medium text-slate-800 leading-relaxed break-words whitespace-pre-wrap">
                                 {work.name}
                             </p>
@@ -579,7 +601,7 @@ const PhotoGallerySection = ({projectPhotos}: { projectPhotos: any[] }) => {
             />
 
             <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-widest mb-6">
-                Fotografije zahvata <span
+                Fotografije <span
                 className="text-sm font-medium text-slate-500 normal-case ml-2">({projectPhotos.length})</span>
             </h4>
 
@@ -679,7 +701,7 @@ const ModelSection = ({models3d}: { models3d: any[] }) => {
     return (
         <div className="border-t border-slate-100 pt-8">
             <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-widest mb-4 flex justify-between items-end">
-                Interaktivni 3D Modeli <span
+                3D Modeli <span
                 className="text-sm font-medium text-slate-500 normal-case ml-2">({totalModels})</span>
             </h4>
             <div className="w-full rounded-md overflow-hidden border border-slate-300 shadow-sm bg-slate-50">

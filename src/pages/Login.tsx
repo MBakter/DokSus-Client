@@ -1,6 +1,6 @@
-import { useState, useContext } from 'preact/hooks';
-import { AuthContext } from '../context/AuthContext';
-import { loginUser } from '../api/AuthApi';
+import {useContext, useState} from 'preact/hooks';
+import {AuthContext} from '../context/AuthContext';
+import {loginUser} from '../api/AuthApi';
 import type {FormEvent} from "preact/compat";
 
 export function useLogin() {
@@ -42,7 +42,9 @@ export function Login() {
             <div className="w-full max-w-md bg-white p-10 rounded-lg border border-slate-200 shadow-sm">
                 <div className="mb-8 text-center">
                     <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Prijava u sustav</h2>
-                    <p className="text-sm text-slate-500 mt-2">Unesite svoje akademske podatke za pristup</p>
+                    <p className="text-sm text-slate-500 mt-2">
+                        Unesite svoje podatke za pristup
+                    </p>
                 </div>
 
                 {error && (
