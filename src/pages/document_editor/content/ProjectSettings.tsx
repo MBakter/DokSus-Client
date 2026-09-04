@@ -2,6 +2,7 @@ import {getDownloadUrl} from "../../../util/Utilities.ts";
 import {IconGlobe, IconImageAdd, IconImageEdit, IconInstitution, IconTrash, IconUsers} from "../../../assets/Icons.tsx";
 import {Visibility} from "../../../data/types/Document.ts";
 import {UserSelector} from "./components/UserSelector.tsx";
+import {SingleFileType} from "../useDocumentEditor.ts";
 
 interface CoverPhotoProps {
     coverFile: File | null;
@@ -27,7 +28,7 @@ export function ProjectSettings({ metadata, fileManager }: any) {
                     coverFile={fileManager.files.cover}
                     serverCover={fileManager.serverPaths.cover}
                     coverPreviewUrl={fileManager.coverPreviewUrl}
-                    onChange={fileManager.handleSingleFileChange('cover')}
+                    onChange={fileManager.handleSingleFileChange(SingleFileType.COVER)}
                     onRemove={fileManager.handleRemoveCover}
                 />
             </div>

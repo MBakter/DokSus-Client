@@ -38,6 +38,20 @@ export const INITIAL_DATA: RestorationData = {
     finishingLayer: ''
 };
 
+// @ts-ignore
+export enum SingleFileType {
+    COVER = 'cover',
+    PDF = 'pdf',
+    VIDEO = 'video'
+}
+
+// @ts-ignore
+export enum MultiFileType {
+    PROJECT_PHOTOS = 'projectPhotos',
+    MODELS_3D = 'models3d',
+    ADDITIONAL_PDFS = 'additionalPdfs'
+}
+
 export function useDocumentForm() {
     const [restorationData, setRestorationData] = useState<RestorationData>(INITIAL_DATA);
     const [snapshot, setSnapshot] = useState<RestorationData>(INITIAL_DATA);
@@ -177,16 +191,16 @@ export function useDocumentFiles() {
         setCoverPreviewUrl(null);
     };
 
-    const handleSingleFileChange = (type: 'cover' | 'pdf' | 'video') => (e: Event) => {
+    const handleSingleFileChange = (type: SingleFileType) => (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
             const selectedFile = target.files[0];
-            if (type === 'cover') {
+            if (type === SingleFileType.COVER) {
                 setFiles(prev => ({...prev, cover: selectedFile}));
                 setCoverPreviewUrl(URL.createObjectURL(selectedFile));
-            } else if (type === 'pdf') {
+            } else if (type === SingleFileType.PDF) {
                 setFiles(prev => ({...prev, pdf: selectedFile}));
-            } else if (type === 'video') {
+            } else if (type === SingleFileType.VIDEO) {
                 setFiles(prev => ({
                     ...prev,
                     video: {
@@ -199,7 +213,7 @@ export function useDocumentFiles() {
         }
     };
 
-    const handleMultipleFilesChange = (type: 'projectPhotos' | 'models3d' | 'additionalPdfs') => (e: Event) => {
+    const handleMultipleFilesChange = (type: MultiFileType) => (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
             const newFiles: NamedFile[] = Array.from(target.files).map(file => ({
@@ -212,7 +226,7 @@ export function useDocumentFiles() {
         target.value = '';
     };
 
-    const handleUpdateFileName = (type: 'projectPhotos' | 'models3d' | 'additionalPdfs', index: number, newName: string) => setFiles(prev => {
+    const handleUpdateFileName = (type: MultiFileType, index: number, newName: string) => setFiles(prev => {
         const updated = [...prev[type]];
         updated[index].name = newName;
         return {...prev, [type]: updated};
@@ -254,7 +268,7 @@ export function useDocumentFiles() {
         setServerPaths(prev => ({...prev, pdf: ''}));
     };
 
-    const handleRemoveFile = (type: 'projectPhotos' | 'models3d' | 'additionalPdfs', index: number) => setFiles(prev => {
+    const handleRemoveFile = (type: MultiFileType, index: number) => setFiles(prev => {
         const updated = [...prev[type]];
         if (updated[index].previewUrl) URL.revokeObjectURL(updated[index].previewUrl);
         updated.splice(index, 1);

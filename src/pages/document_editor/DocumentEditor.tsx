@@ -1,4 +1,4 @@
-import {useDocumentEditor} from "./useDocumentEditor.ts";
+import {SingleFileType, useDocumentEditor} from "./useDocumentEditor.ts";
 import {useEffect, useState} from "preact/hooks";
 import {RestorationDataFields,} from "./content/RestorationDataFields.tsx";
 import {ProjectSettings} from "./content/ProjectSettings.tsx";
@@ -45,7 +45,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     category={editor.restorationData.category}
                     pdfFile={editor.fileManager.files.pdf}
                     serverPdf={editor.fileManager.serverPaths.pdf}
-                    onChange={editor.fileManager.handleSingleFileChange('pdf')}
+                    onChange={editor.fileManager.handleSingleFileChange(SingleFileType.PDF)}
                     onRemove={editor.fileManager.handleRemovePdf}
                 />
 

@@ -5,7 +5,7 @@ import Lightbox from "yet-another-react-lightbox";
 import {Zoom} from "yet-another-react-lightbox/plugins";
 import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
-import type {useDocumentFiles} from "../useDocumentEditor.ts";
+import {MultiFileType, SingleFileType, type useDocumentFiles} from "../useDocumentEditor.ts";
 import type {NamedFile, ServerNamedFile} from "../../../data/types/Document.ts";
 
 export function Attachments({fileManager}: { fileManager: ReturnType<typeof useDocumentFiles> }) {
@@ -14,19 +14,19 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Multimedija i prilozi</h2>
 
             <AdditionalPdfsSection
-                files={fileManager.files.additionalPdfs}
-                serverPaths={fileManager.serverPaths.additionalPdfs}
-                onChange={fileManager.handleMultipleFilesChange('additionalPdfs')}
-                onUpdateFileName={(index, newName) => fileManager.handleUpdateFileName('additionalPdfs', index, newName)}
-                onUpdateServerName={fileManager.handleUpdateServerAdditionalPdfName}
-                onRemoveFile={(index) => fileManager.handleRemoveFile('additionalPdfs', index)}
-                onRemoveServerFile={fileManager.handleRemoveServerAdditionalPdf}
+                files={fileManager.files}
+                serverPaths={fileManager.serverPaths}
+                onMultipleFilesChange={fileManager.handleMultipleFilesChange(MultiFileType.ADDITIONAL_PDFS)}
+                onUpdateFileName={fileManager.handleUpdateFileName}
+                onUpdateServerPdfName={fileManager.handleUpdateServerAdditionalPdfName}
+                onRemoveFile={fileManager.handleRemoveFile}
+                onRemoveServerPdf={fileManager.handleRemoveServerAdditionalPdf}
             />
 
             <PhotosSection
                 files={fileManager.files}
                 serverPaths={fileManager.serverPaths}
-                onMultipleFilesChange={fileManager.handleMultipleFilesChange('projectPhotos')}
+                onMultipleFilesChange={fileManager.handleMultipleFilesChange(MultiFileType.PROJECT_PHOTOS)}
                 onUpdateFileName={fileManager.handleUpdateFileName}
                 onUpdateServerPhotoName={fileManager.handleUpdateServerPhotoName}
                 onRemoveFile={fileManager.handleRemoveFile}
@@ -36,7 +36,7 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
             <Models3DSection
                 files={fileManager.files}
                 serverPaths={fileManager.serverPaths}
-                onMultipleFilesChange={fileManager.handleMultipleFilesChange('models3d')}
+                onMultipleFilesChange={fileManager.handleMultipleFilesChange(MultiFileType.MODELS_3D)}
                 onUpdateFileName={fileManager.handleUpdateFileName}
                 onUpdateServerModelName={fileManager.handleUpdateServerModelName}
                 onRemoveFile={fileManager.handleRemoveFile}
@@ -46,7 +46,7 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
             <VideoSection
                 videoFile={fileManager.files.video}
                 serverVideo={fileManager.serverPaths.video}
-                onChange={fileManager.handleSingleFileChange('video')}
+                onChange={fileManager.handleSingleFileChange(SingleFileType.VIDEO)}
                 onUpdateVideoName={fileManager.handleUpdateVideoName}
                 onRemoveVideo={fileManager.handleRemoveVideo}
             />
@@ -54,16 +54,30 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
     );
 }
 
+export interface AdditionalPdfsSectionProps {
+    files: { additionalPdfs: NamedFile[] };
+    serverPaths: { additionalPdfs: ServerNamedFile[] };
+    onMultipleFilesChange: (e: any) => void;
+    onUpdateFileName: (type: MultiFileType, index: number, newName: string) => void;
+    onRemoveFile: (type: MultiFileType, index: number) => void;
+    onUpdateServerPdfName: (index: number, newName: string) => void;
+    onRemoveServerPdf: (index: number) => void;
+}
+
 export function AdditionalPdfsSection(
     {
         files,
         serverPaths,
-        onChange,
+        onMultipleFilesChange,
         onUpdateFileName,
-        onUpdateServerName,
+        onUpdateServerPdfName,
         onRemoveFile,
-        onRemoveServerFile
-    }: any) {
+        onRemoveServerPdf
+    }: AdditionalPdfsSectionProps) {
+
+    const localPdfs = files.additionalPdfs || [];
+    const serverPdfs = serverPaths.additionalPdfs || [];
+
     return (
         <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm w-full">
             <h2 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
@@ -77,16 +91,16 @@ export function AdditionalPdfsSection(
                     <label
                         className="cursor-pointer inline-flex items-center justify-center bg-white border-2 border-dashed border-slate-300 text-slate-700 font-medium text-sm py-2.5 px-6 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-all">
                         Dodaj PDF priloge
-                        <input type="file" multiple accept=".pdf" className="hidden" onChange={onChange}/>
+                        <input type="file" multiple accept=".pdf" className="hidden" onChange={onMultipleFilesChange}/>
                     </label>
                 </div>
 
                 {/* Combined List of Server and Local PDFs */}
-                {(serverPaths.length > 0 || files.length > 0) && (
+                {(serverPdfs.length > 0 || localPdfs.length > 0) && (
                     <div className="flex flex-col gap-3">
 
                         {/* 1. Existing Server PDFs */}
-                        {serverPaths.map((pdf: any, index: number) => (
+                        {serverPdfs.map((pdf, index) => (
                             <div key={`server-${index}`}
                                  className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
                                 <div className="text-red-500 shrink-0">
@@ -95,7 +109,7 @@ export function AdditionalPdfsSection(
                                 <input
                                     type="text"
                                     value={pdf.name}
-                                    onChange={(e) => onUpdateServerName(index, (e.target as HTMLInputElement).value)}
+                                    onChange={(e) => onUpdateServerPdfName(index, (e.target as HTMLInputElement).value)}
                                     placeholder="Naziv priloga"
                                     className="flex-1 bg-white border border-slate-300 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 font-medium"
                                 />
@@ -110,7 +124,7 @@ export function AdditionalPdfsSection(
                                 </a>
                                 <button
                                     type="button"
-                                    onClick={() => onRemoveServerFile(index)}
+                                    onClick={() => onRemoveServerPdf(index)}
                                     className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
                                     title="Obriši"
                                 >
@@ -120,7 +134,7 @@ export function AdditionalPdfsSection(
                         ))}
 
                         {/* 2. New Local Uploads */}
-                        {files.map((pdf: any, index: number) => (
+                        {localPdfs.map((pdf, index) => (
                             <div key={`local-${index}`}
                                  className="flex items-center gap-3 p-3 bg-emerald-50/50 border border-emerald-100 rounded-md">
                                 <div className="text-emerald-600 shrink-0">
@@ -129,13 +143,13 @@ export function AdditionalPdfsSection(
                                 <input
                                     type="text"
                                     value={pdf.name}
-                                    onChange={(e) => onUpdateFileName(index, (e.target as HTMLInputElement).value)}
+                                    onChange={(e) => onUpdateFileName(MultiFileType.ADDITIONAL_PDFS, index, (e.target as HTMLInputElement).value)}
                                     placeholder="Naziv priloga"
                                     className="flex-1 bg-white border border-emerald-200 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium"
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => onRemoveFile(index)}
+                                    onClick={() => onRemoveFile(MultiFileType.ADDITIONAL_PDFS, index)}
                                     className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
                                     title="Ukloni"
                                 >
@@ -154,9 +168,9 @@ interface PhotosSectionProps {
     files: { projectPhotos: NamedFile[] };
     serverPaths: { projectPhotos: ServerNamedFile[] };
     onMultipleFilesChange: (e: Event) => void;
-    onUpdateFileName: (type: 'projectPhotos' | 'models3d', index: number, newName: string) => void;
+    onUpdateFileName: (type: MultiFileType, index: number, newName: string) => void;
+    onRemoveFile: (type: MultiFileType, index: number) => void;
     onUpdateServerPhotoName: (index: number, newName: string) => void;
-    onRemoveFile: (type: 'projectPhotos' | 'models3d', index: number) => void;
     onRemoveServerPhoto: (index: number) => void;
 }
 
@@ -253,12 +267,12 @@ export function PhotosSection(
                         <textarea
                             value={item.name}
                             placeholder="Unesite opisni naziv fotografije (u više linija)"
-                            onChange={(e) => onUpdateFileName('projectPhotos', index, (e.target as HTMLTextAreaElement).value)}
+                            onChange={(e) => onUpdateFileName(MultiFileType.PROJECT_PHOTOS, index, (e.target as HTMLTextAreaElement).value)}
                             className="w-full text-sm px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 resize-none h-16"
                         />
                         <div className="flex justify-between items-end mt-1">
                             <span className="text-xs text-slate-500 truncate max-w-[200px]">{item.file.name}</span>
-                            <button onClick={() => onRemoveFile('projectPhotos', index)}
+                            <button onClick={() => onRemoveFile(MultiFileType.PROJECT_PHOTOS, index)}
                                     className="text-red-500 hover:bg-red-100 text-sm px-3 py-1 rounded transition-colors font-medium">Ukloni
                             </button>
                         </div>
@@ -279,9 +293,9 @@ interface Models3DSectionProps {
     files: { models3d: NamedFile[] };
     serverPaths: { models3d: ServerNamedFile[] };
     onMultipleFilesChange: (e: Event) => void;
-    onUpdateFileName: (type: 'projectPhotos' | 'models3d', index: number, newName: string) => void;
+    onUpdateFileName: (type: MultiFileType, index: number, newName: string) => void;
+    onRemoveFile: (type: MultiFileType, index: number) => void;
     onUpdateServerModelName: (index: number, newName: string) => void;
-    onRemoveFile: (type: 'projectPhotos' | 'models3d', index: number) => void;
     onRemoveServerModel: (index: number) => void;
 }
 
@@ -378,7 +392,7 @@ export function Models3DSection(
                                         if (currentModel.isServer) {
                                             onUpdateServerModelName(currentModel.index, (e.target as HTMLTextAreaElement).value);
                                         } else {
-                                            onUpdateFileName('models3d', currentModel.index, (e.target as HTMLTextAreaElement).value);
+                                            onUpdateFileName(MultiFileType.MODELS_3D, currentModel.index, (e.target as HTMLTextAreaElement).value);
                                         }
                                     }}
                                     className="w-full text-sm font-medium text-slate-700 bg-slate-50 border border-slate-300 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded p-3"
@@ -404,7 +418,7 @@ export function Models3DSection(
                                             if (currentModel.isServer) {
                                                 onRemoveServerModel(currentModel.index);
                                             } else {
-                                                onRemoveFile('models3d', currentModel.index);
+                                                onRemoveFile(MultiFileType.MODELS_3D, currentModel.index);
                                             }
                                         }}
                                         className="text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 font-bold px-4 py-1.5 rounded text-sm transition-all"
