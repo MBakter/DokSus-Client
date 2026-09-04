@@ -4,17 +4,15 @@ import axiosClient from "../AxiosClient.ts";
 export const fetchDocuments = async (
     page: number,
     category: string | null,
-    search: string | null
+    search: string | null,
+    group: string | null = null,
+    size: number = 12
 ): Promise<PaginatedResponse<Document>> => {
-    const params: Record<string, string | number> = { page, size: 30 };
+    const params: Record<string, string | number> = { page, size };
 
-    if (search) {
-        params['search'] = search;
-    }
-
-    if (category && category !== 'UNSPECIFIED') {
-        params['category'] = category;
-    }
+    if (search) params['search'] = search;
+    if (category && category !== 'UNSPECIFIED') params['category'] = category;
+    if (group) params['group'] = group;
 
     const response = await axiosClient.get<PaginatedResponse<Document>>('/documents', {
         params

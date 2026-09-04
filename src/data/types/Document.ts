@@ -84,8 +84,11 @@ export interface Work {
 }
 
 export interface PaginatedResponse<T> {
-    content: T[]; // Spring Boot Pagination payload array (do not rename)
-    totalPages: number;
-    totalElements: number;
-    number: number;
+    content: T[];
+    page: {
+        size: number;
+        totalElements: number;
+        totalPages: number;
+        number: number;
+    };
 }
