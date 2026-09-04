@@ -5,10 +5,12 @@ import {
     deleteCover,
     deletePdf,
     fetchDocumentById,
+    syncAdditionalPdfs,
     syncModels3d,
     syncProjectPhotos,
     syncVideo,
     updateDocumentMetadata,
+    uploadAdditionalPdfs,
     uploadCover,
     uploadModels3d,
     uploadPdf,
@@ -46,7 +48,7 @@ export function useDocumentForm() {
     ) => {
         setRestorationData(prev => {
             const nextValue = typeof value === 'function' ? (value as Function)(prev[field]) : value;
-            return { ...prev, [field]: nextValue };
+            return {...prev, [field]: nextValue};
         });
     };
 
@@ -119,22 +121,28 @@ export function useDocumentFiles() {
         video: NamedFile | null;
         projectPhotos: NamedFile[];
         models3d: NamedFile[];
-    }>({cover: null, pdf: null, video: null, projectPhotos: [], models3d: []});
+        additionalPdfs: NamedFile[];
+    }>({cover: null, pdf: null, video: null, projectPhotos: [], models3d: [], additionalPdfs: []});
+
     const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+
     const [serverPaths, setServerPaths] = useState<{
         cover: string;
         pdf: string;
         video: ServerNamedFile | null;
         projectPhotos: ServerNamedFile[];
         models3d: ServerNamedFile[];
-    }>({cover: '', pdf: '', video: null, projectPhotos: [], models3d: []});
+        additionalPdfs: ServerNamedFile[];
+    }>({cover: '', pdf: '', video: null, projectPhotos: [], models3d: [], additionalPdfs: []});
+
     const [initialServerState, setInitialServerState] = useState<{
         cover: string;
         pdf: string;
         photos: ServerNamedFile[];
         models: ServerNamedFile[];
         video: ServerNamedFile | null;
-    }>({cover: '', pdf: '', photos: [], models: [], video: null});
+        additionalPdfs: ServerNamedFile[];
+    }>({cover: '', pdf: '', photos: [], models: [], video: null, additionalPdfs: []});
 
     const initializeFiles = (document: any) => {
         // Fallback to empty object if document.files is missing (e.g., old data)
@@ -142,6 +150,7 @@ export function useDocumentFiles() {
 
         const fetchedPhotos = filesData.projectPhotos || [];
         const fetchedModels = filesData.models3d || [];
+        const fetchedAdditionalPdfs = filesData.additionalPdfs || [];
         const fetchedVideo = filesData.video || null;
 
         setServerPaths({
@@ -149,7 +158,8 @@ export function useDocumentFiles() {
             pdf: filesData.pdfPath || '',
             video: fetchedVideo,
             projectPhotos: fetchedPhotos,
-            models3d: fetchedModels
+            models3d: fetchedModels,
+            additionalPdfs: fetchedAdditionalPdfs
         });
 
         setInitialServerState({
@@ -157,12 +167,13 @@ export function useDocumentFiles() {
             pdf: filesData.pdfPath || '',
             photos: JSON.parse(JSON.stringify(fetchedPhotos)),
             models: JSON.parse(JSON.stringify(fetchedModels)),
-            video: fetchedVideo ? JSON.parse(JSON.stringify(fetchedVideo)) : null
+            video: fetchedVideo ? JSON.parse(JSON.stringify(fetchedVideo)) : null,
+            additionalPdfs: JSON.parse(JSON.stringify(fetchedAdditionalPdfs))
         });
     };
 
     const resetLocalFiles = () => {
-        setFiles({cover: null, pdf: null, video: null, projectPhotos: [], models3d: []});
+        setFiles({cover: null, pdf: null, video: null, projectPhotos: [], models3d: [], additionalPdfs: []});
         setCoverPreviewUrl(null);
     };
 
@@ -182,13 +193,13 @@ export function useDocumentFiles() {
                         file: selectedFile,
                         name: selectedFile.name.split('.')[0],
                         previewUrl: URL.createObjectURL(selectedFile)
-                    }
+                    } as NamedFile
                 }));
             }
         }
     };
 
-    const handleMultipleFilesChange = (type: 'projectPhotos' | 'models3d') => (e: Event) => {
+    const handleMultipleFilesChange = (type: 'projectPhotos' | 'models3d' | 'additionalPdfs') => (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
             const newFiles: NamedFile[] = Array.from(target.files).map(file => ({
@@ -201,21 +212,30 @@ export function useDocumentFiles() {
         target.value = '';
     };
 
-    const handleUpdateFileName = (type: 'projectPhotos' | 'models3d', index: number, newName: string) => setFiles(prev => {
+    const handleUpdateFileName = (type: 'projectPhotos' | 'models3d' | 'additionalPdfs', index: number, newName: string) => setFiles(prev => {
         const updated = [...prev[type]];
         updated[index].name = newName;
         return {...prev, [type]: updated};
     });
+
     const handleUpdateServerPhotoName = (index: number, newName: string) => setServerPaths(prev => {
         const updated = [...prev.projectPhotos];
         updated[index].name = newName;
         return {...prev, projectPhotos: updated};
     });
+
     const handleUpdateServerModelName = (index: number, newName: string) => setServerPaths(prev => {
         const updated = [...prev.models3d];
         updated[index].name = newName;
         return {...prev, models3d: updated};
     });
+
+    const handleUpdateServerAdditionalPdfName = (index: number, newName: string) => setServerPaths(prev => {
+        const updated = [...prev.additionalPdfs];
+        updated[index].name = newName;
+        return {...prev, additionalPdfs: updated};
+    });
+
     const handleUpdateVideoName = (newName: string, isServer: boolean) => {
         if (isServer && serverPaths.video) setServerPaths(prev => ({
             ...prev,
@@ -228,26 +248,37 @@ export function useDocumentFiles() {
         setCoverPreviewUrl(null);
         setServerPaths(prev => ({...prev, cover: ''}));
     };
+
     const handleRemovePdf = () => {
         setFiles(prev => ({...prev, pdf: null}));
         setServerPaths(prev => ({...prev, pdf: ''}));
     };
-    const handleRemoveFile = (type: 'projectPhotos' | 'models3d', index: number) => setFiles(prev => {
+
+    const handleRemoveFile = (type: 'projectPhotos' | 'models3d' | 'additionalPdfs', index: number) => setFiles(prev => {
         const updated = [...prev[type]];
         if (updated[index].previewUrl) URL.revokeObjectURL(updated[index].previewUrl);
         updated.splice(index, 1);
         return {...prev, [type]: updated};
     });
+
     const handleRemoveServerPhoto = (index: number) => setServerPaths(prev => {
         const updated = [...prev.projectPhotos];
         updated.splice(index, 1);
         return {...prev, projectPhotos: updated};
     });
+
     const handleRemoveServerModel = (index: number) => setServerPaths(prev => {
         const updated = [...prev.models3d];
         updated.splice(index, 1);
         return {...prev, models3d: updated};
     });
+
+    const handleRemoveServerAdditionalPdf = (index: number) => setServerPaths(prev => {
+        const updated = [...prev.additionalPdfs];
+        updated.splice(index, 1);
+        return {...prev, additionalPdfs: updated};
+    });
+
     const handleRemoveVideo = (isServer: boolean) => {
         if (isServer) {
             setServerPaths(prev => ({...prev, video: null}));
@@ -260,18 +291,40 @@ export function useDocumentFiles() {
     const hasServerPhotoChanges = JSON.stringify(serverPaths.projectPhotos) !== JSON.stringify(initialServerState.photos);
     const hasServerModelChanges = JSON.stringify(serverPaths.models3d) !== JSON.stringify(initialServerState.models);
     const hasServerVideoChanges = JSON.stringify(serverPaths.video) !== JSON.stringify(initialServerState.video);
+    const hasServerAdditionalPdfChanges = JSON.stringify(serverPaths.additionalPdfs) !== JSON.stringify(initialServerState.additionalPdfs);
     const hasServerCoverChanges = serverPaths.cover !== initialServerState.cover;
     const hasServerPdfChanges = serverPaths.pdf !== initialServerState.pdf;
-    const hasLocalFileChanges = files.cover !== null || files.pdf !== null || files.video !== null || files.projectPhotos.length > 0 || files.models3d.length > 0;
-    const hasAnyFileChanges = hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerCoverChanges || hasServerPdfChanges || hasLocalFileChanges;
+    const hasLocalFileChanges = files.cover !== null || files.pdf !== null || files.video !== null || files.projectPhotos.length > 0 || files.models3d.length > 0 || files.additionalPdfs.length > 0;
+    const hasAnyFileChanges = hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerAdditionalPdfChanges || hasServerCoverChanges || hasServerPdfChanges || hasLocalFileChanges;
 
     return {
-        files, serverPaths, initialServerState, coverPreviewUrl,
-        handleSingleFileChange, handleMultipleFilesChange, handleUpdateFileName, handleUpdateServerPhotoName,
-        handleUpdateServerModelName, handleUpdateVideoName, handleRemoveFile, handleRemoveServerModel,
-        handleRemoveVideo, handleRemoveCover, handleRemovePdf, handleRemoveServerPhoto,
-        initializeFiles, resetLocalFiles, hasAnyFileChanges,
-        hasServerPhotoChanges, hasServerModelChanges, hasServerVideoChanges, hasServerCoverChanges, hasServerPdfChanges
+        files,
+        serverPaths,
+        initialServerState,
+        coverPreviewUrl,
+        handleSingleFileChange,
+        handleMultipleFilesChange,
+        handleUpdateFileName,
+        handleUpdateServerPhotoName,
+        handleUpdateServerModelName,
+        handleUpdateServerAdditionalPdfName,
+        handleUpdateVideoName,
+        handleRemoveFile,
+        handleRemoveServerModel,
+        handleRemoveServerAdditionalPdf,
+        handleRemoveVideo,
+        handleRemoveCover,
+        handleRemovePdf,
+        handleRemoveServerPhoto,
+        initializeFiles,
+        resetLocalFiles,
+        hasAnyFileChanges,
+        hasServerAdditionalPdfChanges,
+        hasServerPhotoChanges,
+        hasServerModelChanges,
+        hasServerVideoChanges,
+        hasServerCoverChanges,
+        hasServerPdfChanges,
     };
 }
 
@@ -424,6 +477,23 @@ export function useDocumentEditor(id?: string) {
                 fileTasks.push(safeTask(uploadPdf(currentDocId, fileManager.files.pdf), "Spremanje PDF dokumenta"));
             } else if (fileManager.hasServerPdfChanges && !fileManager.serverPaths.pdf) {
                 fileTasks.push(safeTask(deletePdf(currentDocId), "Brisanje PDF dokumenta"));
+            }
+
+            if (fileManager.hasServerAdditionalPdfChanges) {
+                fileTasks.push(safeTask(
+                    syncAdditionalPdfs(currentDocId, fileManager.serverPaths.additionalPdfs),
+                    "Ažuriranje postojećih dodatnih PDF-ova"
+                ));
+            }
+            if (fileManager.files.additionalPdfs.length > 0) {
+                fileTasks.push(safeTask(
+                    uploadAdditionalPdfs(
+                        currentDocId,
+                        fileManager.files.additionalPdfs.map(p => p.file),
+                        fileManager.files.additionalPdfs.map(p => p.name)
+                    ),
+                    "Prijenos novih dodatnih PDF-ova"
+                ));
             }
 
             if (fileManager.files.video) {

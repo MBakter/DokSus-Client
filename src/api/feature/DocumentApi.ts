@@ -93,6 +93,25 @@ export const deletePdf = async (id: string) => {
     await axiosClient.delete(`/documents/${id}/pdf`);
 };
 
+export const uploadAdditionalPdfs = async (id: string, files: File[], names: string[]) => {
+    const formData = new FormData();
+
+    files.forEach(file => formData.append("pdfs", file));
+    names.forEach(name => formData.append("pdfNames", name));
+
+    const response = await axiosClient.post(`/documents/${id}/additional-pdfs`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+    return response.data;
+};
+
+export const syncAdditionalPdfs = async (id: string, existingFiles: any[]) => {
+    const response = await axiosClient.put(`/documents/${id}/additional-pdfs`, { existingFiles });
+    return response.data;
+};
+
 export const uploadVideo = async (id: string, file: File, name: string) => {
     const formData = new FormData();
     formData.append("video", file);

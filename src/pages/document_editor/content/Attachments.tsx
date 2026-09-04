@@ -1,5 +1,5 @@
 import {getDownloadUrl} from "../../../util/Utilities.ts";
-import {IconVideo} from "../../../assets/Icons.tsx";
+import {IconCheck, IconDownload, IconPDF, IconTrash, IconVideo} from "../../../assets/Icons.tsx";
 import {useEffect, useState} from "preact/hooks";
 import Lightbox from "yet-another-react-lightbox";
 import {Zoom} from "yet-another-react-lightbox/plugins";
@@ -12,6 +12,16 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
     return (
         <div className="flex flex-col gap-6">
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-2">Multimedija i prilozi</h2>
+
+            <AdditionalPdfsSection
+                files={fileManager.files.additionalPdfs}
+                serverPaths={fileManager.serverPaths.additionalPdfs}
+                onChange={fileManager.handleMultipleFilesChange('additionalPdfs')}
+                onUpdateFileName={(index, newName) => fileManager.handleUpdateFileName('additionalPdfs', index, newName)}
+                onUpdateServerName={fileManager.handleUpdateServerAdditionalPdfName}
+                onRemoveFile={(index) => fileManager.handleRemoveFile('additionalPdfs', index)}
+                onRemoveServerFile={fileManager.handleRemoveServerAdditionalPdf}
+            />
 
             <PhotosSection
                 files={fileManager.files}
@@ -41,6 +51,102 @@ export function Attachments({fileManager}: { fileManager: ReturnType<typeof useD
                 onRemoveVideo={fileManager.handleRemoveVideo}
             />
         </div>
+    );
+}
+
+export function AdditionalPdfsSection(
+    {
+        files,
+        serverPaths,
+        onChange,
+        onUpdateFileName,
+        onUpdateServerName,
+        onRemoveFile,
+        onRemoveServerFile
+    }: any) {
+    return (
+        <section className="bg-white p-8 rounded-lg border border-slate-200 shadow-sm w-full">
+            <h2 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
+                Dodatni prilozi (PDF)
+            </h2>
+
+            <div className="flex flex-col gap-6">
+
+                {/* Upload Button */}
+                <div>
+                    <label
+                        className="cursor-pointer inline-flex items-center justify-center bg-white border-2 border-dashed border-slate-300 text-slate-700 font-medium text-sm py-2.5 px-6 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-all">
+                        Dodaj PDF priloge
+                        <input type="file" multiple accept=".pdf" className="hidden" onChange={onChange}/>
+                    </label>
+                </div>
+
+                {/* Combined List of Server and Local PDFs */}
+                {(serverPaths.length > 0 || files.length > 0) && (
+                    <div className="flex flex-col gap-3">
+
+                        {/* 1. Existing Server PDFs */}
+                        {serverPaths.map((pdf: any, index: number) => (
+                            <div key={`server-${index}`}
+                                 className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
+                                <div className="text-red-500 shrink-0">
+                                    <IconPDF/>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={pdf.name}
+                                    onChange={(e) => onUpdateServerName(index, (e.target as HTMLInputElement).value)}
+                                    placeholder="Naziv priloga"
+                                    className="flex-1 bg-white border border-slate-300 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 font-medium"
+                                />
+                                <a
+                                    href={getDownloadUrl(pdf.path)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                    title="Pregledaj PDF"
+                                >
+                                    <IconDownload className="w-5 h-5"/>
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => onRemoveServerFile(index)}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                    title="Obriši"
+                                >
+                                    <IconTrash className="w-5 h-5"/>
+                                </button>
+                            </div>
+                        ))}
+
+                        {/* 2. New Local Uploads */}
+                        {files.map((pdf: any, index: number) => (
+                            <div key={`local-${index}`}
+                                 className="flex items-center gap-3 p-3 bg-emerald-50/50 border border-emerald-100 rounded-md">
+                                <div className="text-emerald-600 shrink-0">
+                                    <IconCheck/>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={pdf.name}
+                                    onChange={(e) => onUpdateFileName(index, (e.target as HTMLInputElement).value)}
+                                    placeholder="Naziv priloga"
+                                    className="flex-1 bg-white border border-emerald-200 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => onRemoveFile(index)}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                    title="Ukloni"
+                                >
+                                    <IconTrash className="w-5 h-5"/>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </section>
     );
 }
 

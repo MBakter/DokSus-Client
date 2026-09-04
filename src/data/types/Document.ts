@@ -37,6 +37,7 @@ export interface ServerNamedFile {
 export interface DocumentFiles {
     coverPath?: string;
     pdfPath?: string;
+    additionalPdfs: NamedFile[];
     video?: NamedFile | null;
     projectPhotos: NamedFile[];
     models3d: NamedFile[];
