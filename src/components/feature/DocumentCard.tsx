@@ -10,6 +10,7 @@ export interface DocumentCardProps {
     categories?: any[]; // Passed from parent
 }
 
+/** Reusable preview tile of a document, used in every document list (home, group, account, profile). */
 export function DocumentCard({document, onClick, categories = []}: DocumentCardProps) {
     const {isAuthenticated} = useContext(AuthContext);
     const [imageLoaded, setImageLoaded] = useState(false);

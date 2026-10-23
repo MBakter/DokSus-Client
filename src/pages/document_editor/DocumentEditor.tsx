@@ -10,6 +10,10 @@ interface DocumentEditorProps {
     id?: string;
 }
 
+/**
+ * Editor page for creating (`/novo`) or editing (`/uredi/:id`) a document.
+ * Only arranges the sections; all state and saving logic lives in `useDocumentEditor`.
+ */
 export function DocumentEditor({ id }: DocumentEditorProps) {
     const editor = useDocumentEditor(id);
 

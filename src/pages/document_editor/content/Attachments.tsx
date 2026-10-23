@@ -8,6 +8,7 @@ import '@google/model-viewer';
 import {MultiFileType, SingleFileType, type useDocumentFiles} from "../useDocumentEditor.ts";
 import type {NamedFile, ServerNamedFile} from "../../../data/types/Document.ts";
 
+/** Editor section for additional PDFs, project photos, 3D models and the video. */
 export function Attachments({fileManager}: { fileManager: ReturnType<typeof useDocumentFiles> }) {
     return (
         <div className="flex flex-col gap-6">

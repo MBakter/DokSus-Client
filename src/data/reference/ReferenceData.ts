@@ -13,6 +13,7 @@ export interface ReferenceAnalysis {
     nameHr: string;
 }
 
+/** Hook that loads the list of document categories from the backend. */
 export function useCategoryReference() {
     const [categories, setCategories] = useState<ReferenceCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +36,7 @@ export function useCategoryReference() {
     return { categories, isLoading };
 }
 
+/** Hook that loads the list of analysis types from the backend. */
 export function useAnalysisTypeReference() {
     const [analysisTypes, setAnalysisTypes] = useState<ReferenceAnalysis[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +59,7 @@ export function useAnalysisTypeReference() {
     return { analysisTypes, isLoading };
 }
 
+/** Hook that loads the names of all existing groups (only groups with published documents). */
 export function useGroupReference() {
     const [groups, setGroups] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);

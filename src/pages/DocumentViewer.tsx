@@ -12,6 +12,7 @@ import {useCategoryReference} from "../data/reference/ReferenceData.ts";
 import type {Document} from "../data/types/Document.ts";
 import {route} from "preact-router";
 
+/** Loads a document for the viewer and lets professors change its owner. */
 export function useDocumentViewer(id: string) {
     const [document, setDocument] = useState<Document | null>(null); // Replace 'any' with 'Document' interface
     const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +60,10 @@ export function useDocumentViewer(id: string) {
 
 // --- Main Viewer Component ---
 
+/**
+ * Read-only document page (`/dokument/:id`): shows all data and media (PDFs, photo gallery,
+ * 3D models via `<model-viewer>`, video) of one document.
+ */
 export function DocumentViewer({id}: { id: string }) {
     const {document, isLoading, isChangingCreator, handleCreatorChange} = useDocumentViewer(id);
     const {user} = useContext(AuthContext);

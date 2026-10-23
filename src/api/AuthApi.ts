@@ -18,6 +18,7 @@ export interface AuthResponse {
     user: UserProfile;
 }
 
+/** Registers a new account (`POST /api/auth/register`). Fails if the email is not whitelisted. */
 export const registerUser = async (data: RegisterRequest): Promise<AuthResponse> => {
     try {
         const response = await axiosClient.post<AuthResponse>('/auth/register', data);
@@ -27,6 +28,7 @@ export const registerUser = async (data: RegisterRequest): Promise<AuthResponse>
     }
 };
 
+/** Logs in (`POST /api/auth/login`) and returns the JWT token together with the user's profile. */
 export const loginUser = async (data: LoginRequest): Promise<AuthResponse> => {
     try {
         const response = await axiosClient.post<AuthResponse>('/auth/login', data);

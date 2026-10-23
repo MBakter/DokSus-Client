@@ -53,6 +53,10 @@ export enum MultiFileType {
     ADDITIONAL_PDFS = 'additionalPdfs'
 }
 
+/**
+ * State of the editor's form fields and metadata (visibility, co-creators, mentors).
+ * Keeps a snapshot of the loaded values so it can tell whether anything changed.
+ */
 export function useDocumentForm() {
     const [restorationData, setRestorationData] = useState<RestorationData>(INITIAL_DATA);
     const [snapshot, setSnapshot] = useState<RestorationData>(INITIAL_DATA);
@@ -129,6 +133,11 @@ export function useDocumentForm() {
     };
 }
 
+/**
+ * State of the editor's attachments. Tracks two things separately:
+ * `files` – newly picked files waiting to be uploaded, and
+ * `serverPaths` – files already on the server (which the user may rename or remove).
+ */
 export function useDocumentFiles() {
     const [files, setFiles] = useState<{
         cover: File | null;
@@ -343,6 +352,11 @@ export function useDocumentFiles() {
     };
 }
 
+/**
+ * Main logic of the document editor. Combines the form and file state, loads an existing document,
+ * validates required fields for publishing, and saves: first the form data (create or update),
+ * then all file uploads/syncs in parallel.
+ */
 export function useDocumentEditor(id?: string) {
     const [documentId, setDocumentId] = useState<string | null>(id || null);
     const [isSaving, setIsSaving] = useState(false);

@@ -1,3 +1,4 @@
+/** Error codes returned by the backend; must match the server's `util/ErrorCode.kt`. */
 export enum ErrorCode {
     NOT_WHITELISTED = 'NOT_WHITELISTED',
     ALREADY_REGISTERED = 'ALREADY_REGISTERED',

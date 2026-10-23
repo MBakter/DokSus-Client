@@ -1,6 +1,12 @@
+/**
+ * All backend calls related to documents (`/api/documents/...`).
+ * Saving a document is split in two: the form data is sent as JSON, then each file type
+ * is uploaded (POST, multipart) or synced (PUT, list of files to keep) separately.
+ */
 import type {Document, PaginatedResponse} from '../../data/types/Document.ts';
 import axiosClient from "../AxiosClient.ts";
 
+/** Paginated, filterable list of published documents for the home and group pages. */
 export const fetchDocuments = async (
     page: number,
     category: string | null,
@@ -21,6 +27,7 @@ export const fetchDocuments = async (
     return response.data;
 };
 
+/** Published documents where the given user is creator, co-creator or mentor (public profile page). */
 export const fetchUserPublishedDocuments = async (email: string): Promise<Document[]> => {
     const response = await axiosClient.get<Document[]>('/documents/user', {
         params: { email }
@@ -28,6 +35,7 @@ export const fetchUserPublishedDocuments = async (email: string): Promise<Docume
     return response.data;
 };
 
+/** All documents (drafts and published) owned by the logged-in user. */
 export const fetchMyDocuments = async (): Promise<Document[]> => {
     const response = await axiosClient.get<Document[]>('/documents/me');
     return response.data;
@@ -40,6 +48,7 @@ export const fetchDocumentById = async (id: string): Promise<Document> => {
 
 //// EDIT DOCUMENTS
 
+/** Creates a new document from the form data (no files) and returns it with its new id. */
 export const createDocumentMetadata = async (data: any) => {
     const response = await axiosClient.post('/documents', data);
     return response.data;

@@ -7,6 +7,7 @@ interface GroupSuggestionInputProps {
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+/** Text input for the group name that suggests already existing groups while typing. */
 export function GroupSuggestionInput({ name, value, onChange }: GroupSuggestionInputProps) {
     const { groups } = useGroupReference();
     const [isOpen, setIsOpen] = useState(false);

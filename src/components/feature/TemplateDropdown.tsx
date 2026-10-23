@@ -7,6 +7,7 @@ const NO_TEMPLATE_CATEGORIES = [
     'DIPLOMSKI_I_SEMINARSKI_RADOVI',
 ];
 
+/** Dropdown with download links to the Word templates (`/api/files/template/{category}`) per category. */
 export function TemplateDropdown() {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);

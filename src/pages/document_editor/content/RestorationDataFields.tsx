@@ -21,6 +21,7 @@ export const useTextHandler = (onChange: any) => {
     };
 };
 
+/** Editor section with all descriptive form fields (basic data, materials, keywords, analyses, works). */
 export function RestorationDataFields({restorationData, handleRestorationDataChange, checkRequired}: any) {
     return (
         <div className="flex flex-col gap-6">

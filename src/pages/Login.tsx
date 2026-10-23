@@ -3,6 +3,7 @@ import {AuthContext} from '../context/AuthContext';
 import {loginUser} from '../api/AuthApi';
 import type {FormEvent} from "preact/compat";
 
+/** Login form logic: calls the backend and stores the session through `AuthContext`. */
 export function useLogin() {
     const { login } = useContext(AuthContext);
     const [email, setEmail] = useState('');
@@ -34,6 +35,7 @@ export function useLogin() {
     };
 }
 
+/** Login page (`/prijava`). */
 export function Login() {
     const { email, setEmail, password, setPassword, error, isLoading, handleSubmit } = useLogin();
 

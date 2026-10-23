@@ -14,6 +14,7 @@ interface UserSelectorProps {
     isRequired?: boolean;
 }
 
+/** Search-as-you-type picker for adding users (co-creators, or professors as mentors) to a document. */
 export function UserSelector(
     {
         title,

@@ -1,6 +1,7 @@
 import type {ReactNode} from 'preact/compat';
-import { Header } from './Header';
+import {Header} from './Header';
 
+/** Common frame of every page: the header on top and the current page below it. */
 export function Layout({ children }: { children: ReactNode }) {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">

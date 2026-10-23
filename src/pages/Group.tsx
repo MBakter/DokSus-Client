@@ -10,6 +10,7 @@ interface GroupPageProps {
     url?: string;
 }
 
+/** Group page (`/group/:id`): published documents that belong to one group. */
 export function GroupPage({ id, url }: GroupPageProps) {
     const decodedGroupName = decodeURIComponent(id);
     const [documents, setDocuments] = useState<Document[]>([]);

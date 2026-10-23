@@ -3,6 +3,7 @@ import {loginUser, registerUser} from '../api/AuthApi';
 import {ErrorCode} from "../api/types/ErrorCode.ts";
 import {AuthContext} from "../context/AuthContext.tsx";
 
+/** Registration form logic: registers the account, then logs in automatically. */
 export function useRegister() {
     const { login } = useContext(AuthContext);
 
@@ -46,6 +47,7 @@ export function useRegister() {
     };
 }
 
+/** Registration page (`/registracija`). */
 export function Register() {
     const {
         name, setName,

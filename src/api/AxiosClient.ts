@@ -1,8 +1,15 @@
+/**
+ * Shared HTTP client used by every API call to the backend.
+ * - Prefixes all requests with `/api` (forwarded to the backend by the Vite proxy in development
+ *   and by the web server in production).
+ * - Attaches the logged-in user's JWT token to each request.
+ * - On a 401 response, clears the stored session and redirects to the login page.
+ */
 import axios from 'axios';
 import {getToken} from "../util/Utilities.ts";
 
 // Access the environment variable in Vite
-const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_URL = '/api';
 
 const axiosClient = axios.create({
     baseURL: API_URL,

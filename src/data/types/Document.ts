@@ -1,5 +1,9 @@
 import type {UserProfile} from "./UserProfile.ts";
 
+/**
+ * Shape of a document as received from the backend. Mirrors the server's `Document.kt`;
+ * when a field is added there, it should be added here too.
+ */
 export interface Document {
     // Metadata
     id: string;
@@ -23,12 +27,14 @@ export const Visibility = {
 
 export type Visibility = typeof Visibility[keyof typeof Visibility];
 
+/** A file picked in the browser but not uploaded yet, with its display name and preview URL. */
 export interface NamedFile {
     file: File;
     name: string;
     previewUrl: string;
 }
 
+/** A file that is already stored on the server, referenced by its path. */
 export interface ServerNamedFile {
     path: string;
     name: string;
@@ -49,6 +55,7 @@ export interface DocumentProfiles {
     mentorProfiles?: UserProfile[];
 }
 
+/** The descriptive fields of a document (the editor form). Mirrors `RestorationData` in `Document.kt`. */
 export interface RestorationData {
     category: string;
     inventoryNumber: string;        // Invenatarni broj OKIRU

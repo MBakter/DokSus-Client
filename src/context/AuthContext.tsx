@@ -17,6 +17,10 @@ interface AuthContextType {
     logout: () => void;
 }
 
+/**
+ * Global login state available to every component via `useContext(AuthContext)`.
+ * Tells whether someone is logged in, who it is, and provides `login`/`logout`.
+ */
 export const AuthContext = createContext<AuthContextType>({
     isAuthenticated: false,
     user: null,
@@ -24,6 +28,10 @@ export const AuthContext = createContext<AuthContextType>({
     logout: () => {}
 });
 
+/**
+ * Wraps the whole app and supplies `AuthContext`. The session (JWT token and user data) is kept
+ * in the browser's localStorage, so it survives page reloads.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
 

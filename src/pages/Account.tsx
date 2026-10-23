@@ -6,6 +6,7 @@ import {DocumentCard} from "../components/feature/DocumentCard.tsx";
 import {route} from "preact-router";
 import {useCategoryReference} from "../data/reference/ReferenceData.ts";
 
+/** "My projects" page (`/racun`): the logged-in user's drafts and published documents. */
 export function Account() {
     const { user } = useContext(AuthContext);
     const [documents, setDocuments] = useState<Document[]>([]);

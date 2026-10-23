@@ -9,6 +9,10 @@ interface HomeProps {
     url?: string; // Injected automatically by preact-router
 }
 
+/**
+ * Home page (`/`): searchable, paginated catalogue of published documents.
+ * The filters (search, category, page) live in the URL, so every state can be linked or bookmarked.
+ */
 export function Home({url}: HomeProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [totalPages, setTotalPages] = useState<number>(1);

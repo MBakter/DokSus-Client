@@ -12,6 +12,7 @@ interface PublicProfileProps {
     email?: string; // Automatically injected by preact-router from the URL
 }
 
+/** Public profile page (`/profil/:email`): a user's info and the published documents they took part in. */
 export function PublicProfile({ email }: PublicProfileProps) {
     const { isAuthenticated } = useContext(AuthContext);
     const [createdDocs, setCreatedDocs] = useState<Document[]>([]);

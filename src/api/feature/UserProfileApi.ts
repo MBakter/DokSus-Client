@@ -1,6 +1,7 @@
 import type {UserProfile} from "../../data/types/UserProfile.ts";
 import axiosClient from "../AxiosClient.ts";
 
+/** Loads public profiles for a list of emails and returns them as an `email -> profile` map. */
 export const fetchUserProfiles = async (emails: string[]): Promise<Record<string, UserProfile>> => {
     if (emails.length === 0) return {};
 
@@ -35,6 +36,7 @@ export const fetchSingleUserProfile = async (email: string): Promise<UserProfile
     }
 };
 
+/** Searches users by name, surname or email (min. 2 characters); optionally only professors. */
 export const searchUsersByQuery = async (query: string, isProfessor?: boolean): Promise<UserProfile[]> => {
     if (!query || query.trim().length < 2) return [];
 

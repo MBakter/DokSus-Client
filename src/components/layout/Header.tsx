@@ -4,6 +4,10 @@ import {AuthContext} from "../../context/AuthContext.tsx";
 import {IconPlus, IconSearch, IconSignIn, IconSignOut} from "../../assets/Icons.tsx";
 import {TemplateDropdown} from "../feature/TemplateDropdown.tsx";
 
+/**
+ * Page header: the top bar (logo, search, login/logout) and, for logged-in users,
+ * the account bar with "new document", templates and "my projects" links.
+ */
 export function Header() {
     return (
         <header className="w-full flex flex-col">
@@ -67,6 +71,7 @@ export function AccountBanner() {
     );
 }
 
+/** Top navigation bar. The search box writes the query into the URL (`/?search=...`), which the home page reads. */
 export function TopBar() {
     const { isAuthenticated, logout } = useContext(AuthContext);
     const [localInput, setLocalInput] = useState('');

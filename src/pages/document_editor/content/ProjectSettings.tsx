@@ -13,6 +13,7 @@ interface CoverPhotoProps {
 }
 
 
+/** Editor section for visibility, cover photo, co-creators and mentors. */
 export function ProjectSettings({ metadata, fileManager }: any) {
     return (
         <div className="flex flex-col gap-6">

@@ -10,6 +10,10 @@ import {DocumentEditor} from "./pages/document_editor/DocumentEditor.tsx";
 import {DocumentViewer} from "./pages/DocumentViewer.tsx";
 import {GroupPage} from "./pages/Group.tsx";
 
+/**
+ * Root component. Provides the login state, the common page layout and the router,
+ * which maps each URL path to a page component. New pages are registered here.
+ */
 export function App() {
     return (
         <AuthProvider>

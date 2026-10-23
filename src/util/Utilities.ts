@@ -3,8 +3,9 @@
  */
 
 /**
- * Fetch files from backend
-  */
+ * Builds the URL of a stored file (image, PDF, model, video) from its server path,
+ * usable directly in `src` / `href` attributes.
+ */
 export const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComponent(path)}`;
 
 export const getToken = () => localStorage.getItem('jwt_token');
