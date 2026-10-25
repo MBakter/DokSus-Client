@@ -3,6 +3,7 @@ import {route} from 'preact-router';
 import {AuthContext} from "../../context/AuthContext.tsx";
 import {IconPlus, IconSearch, IconSignIn, IconSignOut} from "../../assets/Icons.tsx";
 import {TemplateDropdown} from "../feature/TemplateDropdown.tsx";
+import logo from "../../assets/logo.svg";
 
 /**
  * Page header: the top bar (logo, search, login/logout) and, for logged-in users,
@@ -106,7 +107,7 @@ export function TopBar() {
             <div className="flex items-center gap-10">
                 {/* Logo */}
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => route('/')}>
-                    <img src="/src/assets/logo.svg" alt="Doksus OKIRU" className="h-12 w-auto" />
+                    <img src={logo} alt="DokSus OKIRU" className="h-12 w-auto" />
                 </div>
 
                 {/* Primary Navigation */}

@@ -473,10 +473,16 @@ export function useDocumentEditor(id?: string) {
         };
 
         try {
-            // Unpack the cleanly separated states into the payload
+            // Publishing needs the cover and PDF to already be stored. When they are only
+            // selected locally, save as a draft first and publish after the uploads succeed.
+            const coverAlreadyStored = Boolean(fileManager.serverPaths.cover?.trim()) && !fileManager.files.cover;
+            const pdfAlreadyStored = Boolean(fileManager.serverPaths.pdf?.trim()) && !fileManager.files.pdf;
+            const publishImmediately = publish && coverAlreadyStored && pdfAlreadyStored;
+            const keepPublished = formManager.metadata.isPublished && publish;
+
             const metadataPayload = {
                 content: formManager.restorationData,
-                isPublished: publish,
+                isPublished: publishImmediately || keepPublished,
                 visibility: formManager.metadata.visibility,
                 coCreatorEmails: formManager.metadata.coCreators.map(a => a.email),
                 mentorEmails: formManager.metadata.mentors.map(m => m.email)
@@ -492,32 +498,35 @@ export function useDocumentEditor(id?: string) {
             }
 
             if (!currentDocId) throw new Error("Neuspješno dohvaćanje ID-a dokumenta.");
+            const docId = currentDocId;
 
             // CONCURRENT FILES
-            const fileTasks: Promise<void>[] = [];
+            const fileTasks: Array<() => Promise<unknown>> = [];
 
             if (fileManager.files.cover) {
-                fileTasks.push(safeTask(uploadCover(currentDocId, fileManager.files.cover), "Spremanje naslovne fotografije"));
+                const cover = fileManager.files.cover;
+                fileTasks.push(() => safeTask(uploadCover(docId, cover), "Spremanje naslovne fotografije"));
             } else if (fileManager.hasServerCoverChanges && !fileManager.serverPaths.cover) {
-                fileTasks.push(safeTask(deleteCover(currentDocId), "Brisanje naslovne fotografije"));
+                fileTasks.push(() => safeTask(deleteCover(docId), "Brisanje naslovne fotografije"));
             }
 
             if (fileManager.files.pdf) {
-                fileTasks.push(safeTask(uploadPdf(currentDocId, fileManager.files.pdf), "Spremanje PDF dokumenta"));
+                const pdf = fileManager.files.pdf;
+                fileTasks.push(() => safeTask(uploadPdf(docId, pdf), "Spremanje PDF dokumenta"));
             } else if (fileManager.hasServerPdfChanges && !fileManager.serverPaths.pdf) {
-                fileTasks.push(safeTask(deletePdf(currentDocId), "Brisanje PDF dokumenta"));
+                fileTasks.push(() => safeTask(deletePdf(docId), "Brisanje PDF dokumenta"));
             }
 
             if (fileManager.hasServerAdditionalPdfChanges) {
-                fileTasks.push(safeTask(
-                    syncAdditionalPdfs(currentDocId, fileManager.serverPaths.additionalPdfs),
+                fileTasks.push(() => safeTask(
+                    syncAdditionalPdfs(docId, fileManager.serverPaths.additionalPdfs),
                     "Ažuriranje postojećih dodatnih PDF-ova"
                 ));
             }
             if (fileManager.files.additionalPdfs.length > 0) {
-                fileTasks.push(safeTask(
+                fileTasks.push(() => safeTask(
                     uploadAdditionalPdfs(
-                        currentDocId,
+                        docId,
                         fileManager.files.additionalPdfs.map(p => p.file),
                         fileManager.files.additionalPdfs.map(p => p.name)
                     ),
@@ -526,38 +535,51 @@ export function useDocumentEditor(id?: string) {
             }
 
             if (fileManager.files.video) {
-                fileTasks.push(safeTask(uploadVideo(currentDocId, fileManager.files.video.file, fileManager.files.video.name), "Spremanje videa"));
+                const video = fileManager.files.video;
+                fileTasks.push(() => safeTask(uploadVideo(docId, video.file, video.name), "Spremanje videa"));
             } else if (!fileManager.serverPaths.video && fileManager.initialServerState.video) {
-                fileTasks.push(safeTask(syncVideo(currentDocId, null), "Brisanje videa"));
+                fileTasks.push(() => safeTask(syncVideo(docId, null), "Brisanje videa"));
             } else if (fileManager.serverPaths.video && fileManager.hasServerVideoChanges) {
-                fileTasks.push(safeTask(syncVideo(currentDocId, fileManager.serverPaths.video), "Preimenovanje videa"));
+                fileTasks.push(() => safeTask(syncVideo(docId, fileManager.serverPaths.video), "Preimenovanje videa"));
             }
 
             if (fileManager.hasServerPhotoChanges) {
-                fileTasks.push(safeTask(syncProjectPhotos(currentDocId, fileManager.serverPaths.projectPhotos), "Ažuriranje postojećih fotografija"));
+                fileTasks.push(() => safeTask(syncProjectPhotos(docId, fileManager.serverPaths.projectPhotos), "Ažuriranje postojećih fotografija"));
             }
             if (fileManager.files.projectPhotos.length > 0) {
-                fileTasks.push(safeTask(uploadProjectPhotos(currentDocId, fileManager.files.projectPhotos.map(p => p.file), fileManager.files.projectPhotos.map(p => p.name)), "Prijenos novih fotografija"));
+                fileTasks.push(() => safeTask(uploadProjectPhotos(docId, fileManager.files.projectPhotos.map(p => p.file), fileManager.files.projectPhotos.map(p => p.name)), "Prijenos novih fotografija"));
             }
 
             if (fileManager.hasServerModelChanges) {
-                fileTasks.push(safeTask(syncModels3d(currentDocId, fileManager.serverPaths.models3d), "Ažuriranje postojećih 3D modela"));
+                fileTasks.push(() => safeTask(syncModels3d(docId, fileManager.serverPaths.models3d), "Ažuriranje postojećih 3D modela"));
             }
             if (fileManager.files.models3d.length > 0) {
-                fileTasks.push(safeTask(uploadModels3d(currentDocId, fileManager.files.models3d.map(m => m.file), fileManager.files.models3d.map(m => m.name)), "Prijenos novih 3D modela"));
+                fileTasks.push(() => safeTask(uploadModels3d(docId, fileManager.files.models3d.map(m => m.file), fileManager.files.models3d.map(m => m.name)), "Prijenos novih 3D modela"));
             }
 
-            if (fileTasks.length > 0) await Promise.all(fileTasks);
+            // One after another: each call reads and saves the whole document, so parallel calls would overwrite each other.
+            for (const task of fileTasks) await task();
+
+            const requiredFileFailed = failedTasks.some(task =>
+                task.startsWith("Spremanje naslovne") ||
+                task.startsWith("Spremanje PDF") ||
+                task.startsWith("Brisanje naslovne") ||
+                task.startsWith("Brisanje PDF")
+            );
+
+            // Drafts become published only after the required files are actually stored.
+            if (publish && !publishImmediately && !requiredFileFailed) {
+                await updateDocumentMetadata(docId, {...metadataPayload, isPublished: true});
+            }
+
+            const isPublishedNow = (publish && !requiredFileFailed) || (keepPublished && requiredFileFailed);
+            formManager.metadata.setIsPublished(isPublishedNow);
 
             if (failedTasks.length > 0) {
                 alert(`Spremljeno s greškama. Sljedeće operacije nisu uspjele:\n\n- ${failedTasks.join('\n- ')}\n\nMolimo pokušajte ponovno dodati ove datoteke.`);
-                formManager.metadata.setIsPublished(publish);
-            } else {
-                formManager.metadata.setIsPublished(publish);
-                if (publish) {
-                    window.location.href = '/racun';
-                    return;
-                }
+            } else if (publish && isPublishedNow) {
+                window.location.href = '/racun';
+                return;
             }
         } catch (error) {
             console.error("Critical metadata save failure:", error);

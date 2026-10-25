@@ -10,6 +10,7 @@ import {IconCube, IconDownload, IconImagePlaceholder, IconPDF} from "../assets/I
 import {AuthContext} from "../context/AuthContext.tsx";
 import {useCategoryReference} from "../data/reference/ReferenceData.ts";
 import type {Document} from "../data/types/Document.ts";
+import type {UserProfile} from "../data/types/UserProfile.ts";
 import {route} from "preact-router";
 
 /** Loads a document for the viewer and lets professors change its owner. */
@@ -107,7 +108,8 @@ export function DocumentViewer({id}: { id: string }) {
     const hasMultimedia = pdfPath || (projectPhotos && projectPhotos.length > 0) || (models3d && models3d.length > 0) || video;
 
     const creatorEmail = profiles?.creatorProfile?.email || '';
-    const authors = [profiles?.creatorProfile, ...(profiles?.coCreatorProfiles || [])].filter(Boolean);
+    const authors = [profiles?.creatorProfile, ...(profiles?.coCreatorProfiles || [])]
+        .filter((person): person is UserProfile => Boolean(person));
     const mentors = profiles?.mentorProfiles || [];
 
     // Unique profiles for rendering

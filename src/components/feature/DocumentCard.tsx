@@ -28,7 +28,7 @@ export function DocumentCard({document, onClick, categories = []}: DocumentCardP
 
     // Mentors
     const allMentors = document.profiles?.mentorProfiles || [];
-    const mentors = Array.from(new Map(allMentors.map(p => [p.email, p])).values());
+    const mentors = Array.from(new Map(allMentors.map((p: { email: string }) => [p.email, p])).values());
 
     // Determine upload date (prefer publication date if published, fallback to creation)
     const uploadDateRaw = document.publicationDate || document.creationDate;

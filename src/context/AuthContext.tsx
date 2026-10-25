@@ -1,6 +1,7 @@
 import {createContext} from 'preact';
 import {type ReactNode, useState} from 'preact/compat';
 import {useEffect} from "preact/hooks";
+import {clearSessionCookie, setSessionCookie} from "../util/Utilities.ts";
 
 export interface User {
     id: string;
@@ -30,7 +31,8 @@ export const AuthContext = createContext<AuthContextType>({
 
 /**
  * Wraps the whole app and supplies `AuthContext`. The session (JWT token and user data) is kept
- * in the browser's localStorage, so it survives page reloads.
+ * in the browser's localStorage and in a cookie, so it survives page reloads and is sent
+ * with file downloads.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -44,10 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
                 const parsedUser = JSON.parse(storedUser);
                 setUser(parsedUser);
+                setSessionCookie(token);
             } catch (error) {
                 console.error("Corrupted local storage data. Clearing session.");
                 localStorage.removeItem('user_data');
                 localStorage.removeItem('jwt_token');
+                clearSessionCookie();
             }
         }
     }, []);
@@ -55,12 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = (token: string, userData: User) => {
         localStorage.setItem('jwt_token', token);
         localStorage.setItem('user_data', JSON.stringify(userData));
+        setSessionCookie(token);
         setUser(userData);
     };
 
     const logout = () => {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user_data');
+        clearSessionCookie();
         setUser(null);
         window.location.href = '/prijava'; // Redirect to login page
     };

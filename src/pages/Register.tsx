@@ -1,6 +1,6 @@
 import {useContext, useState} from 'preact/hooks';
 import {loginUser, registerUser} from '../api/AuthApi';
-import {ErrorCode} from "../api/types/ErrorCode.ts";
+import {type ErrorCode, ErrorCode as ErrorCodes} from "../api/types/ErrorCode.ts";
 import {AuthContext} from "../context/AuthContext.tsx";
 
 /** Registration form logic: registers the account, then logs in automatically. */
@@ -32,7 +32,7 @@ export function useRegister() {
 
         } catch (err: any) {
             const backendCode = err.response?.data?.errorCode;
-            setErrorCode(ErrorCode[backendCode as keyof typeof ErrorCode] || ErrorCode.UNKNOWN_ERROR);
+            setErrorCode(ErrorCodes[backendCode as keyof typeof ErrorCodes] || ErrorCodes.UNKNOWN_ERROR);
         } finally {
             setIsLoading(false);
         }
@@ -65,19 +65,19 @@ export function Register() {
                     <p className="text-sm text-slate-500 mt-2">Registracija za studente i djelatnike</p>
                 </div>
 
-                {errorCode === ErrorCode.NOT_WHITELISTED && (
+                {errorCode === ErrorCodes.NOT_WHITELISTED && (
                     <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
                         Vaša email adresa nije pronađena na popisu ovlaštenih korisnika. Za odobrenje pristupa, molimo kontaktirajte instituciju. Detalje možete pronaći na <a href="/kontakt" className="underline font-bold hover:text-red-900">kontakt stranici</a>.
                     </div>
                 )}
 
-                {errorCode === ErrorCode.ALREADY_REGISTERED && (
+                {errorCode === ErrorCodes.ALREADY_REGISTERED && (
                     <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
                         Ova email adresa je već registrirana. Pokušajte se prijaviti.
                     </div>
                 )}
 
-                {(errorCode === ErrorCode.INTERNAL_ERROR || errorCode === ErrorCode.UNKNOWN_ERROR) && (
+                {(errorCode === ErrorCodes.INTERNAL_ERROR || errorCode === ErrorCodes.UNKNOWN_ERROR) && (
                     <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
                         Dogodila se neočekivana pogreška na poslužitelju. Pokušajte ponovno kasnije.
                     </div>

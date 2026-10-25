@@ -10,6 +10,19 @@ export const getDownloadUrl = (path: string) => `/api/files?path=${encodeURIComp
 
 export const getToken = () => localStorage.getItem('jwt_token');
 
+/**
+ * The login token is also stored in a cookie so that images, PDFs and 3D models
+ * (loaded by the browser itself, not by Axios) are sent with the user's identity.
+ */
+export const setSessionCookie = (token: string) => {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `jwt_token=${token}; Path=/; Max-Age=86400; SameSite=Lax${secure}`;
+};
+
+export const clearSessionCookie = () => {
+    document.cookie = 'jwt_token=; Path=/; Max-Age=0; SameSite=Lax';
+};
+
 export const getInitials = (name: string, surname: string) => `${name?.charAt(0) || ''}${surname?.charAt(0) || ''}`.toUpperCase();
 
 export const formatDateObj = (dateRaw: any) => {

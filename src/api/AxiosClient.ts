@@ -6,7 +6,7 @@
  * - On a 401 response, clears the stored session and redirects to the login page.
  */
 import axios from 'axios';
-import {getToken} from "../util/Utilities.ts";
+import {clearSessionCookie, getToken} from "../util/Utilities.ts";
 
 // Access the environment variable in Vite
 const API_URL = '/api';
@@ -54,6 +54,7 @@ axiosClient.interceptors.response.use(
 
             localStorage.removeItem('jwt_token');
             localStorage.removeItem('user_data');
+            clearSessionCookie();
 
             // Redirect ONLY when the token is actually invalid
             window.location.href = '/prijava';

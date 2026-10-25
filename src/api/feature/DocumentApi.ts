@@ -6,6 +6,14 @@
 import type {Document, PaginatedResponse} from '../../data/types/Document.ts';
 import axiosClient from "../AxiosClient.ts";
 
+/** Large files (video, 3D models) need longer than the default request timeout. */
+const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+
+const uploadConfig = {
+    timeout: UPLOAD_TIMEOUT_MS,
+    headers: {'Content-Type': 'multipart/form-data'}
+};
+
 /** Paginated, filterable list of published documents for the home and group pages. */
 export const fetchDocuments = async (
     page: number,
@@ -76,11 +84,7 @@ export const uploadCover = async (id: string, file: File) => {
     const formData = new FormData();
     formData.append("cover", file);
 
-    const response = await axiosClient.post(`/documents/${id}/cover`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
+    const response = await axiosClient.post(`/documents/${id}/cover`, formData, uploadConfig);
     return response.data;
 };
 
@@ -92,11 +96,7 @@ export const uploadPdf = async (id: string, file: File) => {
     const formData = new FormData();
     formData.append("pdf", file);
 
-    const response = await axiosClient.post(`/documents/${id}/pdf`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
+    const response = await axiosClient.post(`/documents/${id}/pdf`, formData, uploadConfig);
     return response.data;
 };
 
@@ -105,17 +105,13 @@ export const deletePdf = async (id: string) => {
 };
 
 export const uploadAdditionalPdfs = async (id: string, files: File[], names: string[]) => {
-    const formData = new FormData();
-
-    files.forEach(file => formData.append("pdfs", file));
-    names.forEach(name => formData.append("pdfNames", name));
-
-    const response = await axiosClient.post(`/documents/${id}/additional-pdfs`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
-    return response.data;
+    // One request per file, so a batch is not limited by the total request size.
+    for (let index = 0; index < files.length; index++) {
+        const formData = new FormData();
+        formData.append("pdfs", files[index]);
+        formData.append("pdfNames", names[index]);
+        await axiosClient.post(`/documents/${id}/additional-pdfs`, formData, uploadConfig);
+    }
 };
 
 export const syncAdditionalPdfs = async (id: string, existingFiles: any[]) => {
@@ -128,11 +124,7 @@ export const uploadVideo = async (id: string, file: File, name: string) => {
     formData.append("video", file);
     formData.append("videoName", name);
 
-    const response = await axiosClient.post(`/documents/${id}/video`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
+    const response = await axiosClient.post(`/documents/${id}/video`, formData, uploadConfig);
     return response.data;
 };
 
@@ -142,17 +134,12 @@ export const syncVideo = async (id: string, existingVideo: any | null) => {
 };
 
 export const uploadProjectPhotos = async (id: string, files: File[], names: string[]) => {
-    const formData = new FormData();
-
-    files.forEach(file => formData.append("projectPhotos", file));
-    names.forEach(name => formData.append("projectPhotoNames", name));
-
-    const response = await axiosClient.post(`/documents/${id}/photos`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
-    return response.data;
+    for (let index = 0; index < files.length; index++) {
+        const formData = new FormData();
+        formData.append("projectPhotos", files[index]);
+        formData.append("projectPhotoNames", names[index]);
+        await axiosClient.post(`/documents/${id}/photos`, formData, uploadConfig);
+    }
 };
 
 export const syncProjectPhotos = async (id: string, existingFiles: any[]) => {
@@ -161,17 +148,12 @@ export const syncProjectPhotos = async (id: string, existingFiles: any[]) => {
 };
 
 export const uploadModels3d = async (id: string, files: File[], names: string[]) => {
-    const formData = new FormData();
-
-    files.forEach(file => formData.append("models3d", file));
-    names.forEach(name => formData.append("models3dNames", name));
-
-    const response = await axiosClient.post(`/documents/${id}/models`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
-    return response.data;
+    for (let index = 0; index < files.length; index++) {
+        const formData = new FormData();
+        formData.append("models3d", files[index]);
+        formData.append("models3dNames", names[index]);
+        await axiosClient.post(`/documents/${id}/models`, formData, uploadConfig);
+    }
 };
 
 export const syncModels3d = async (id: string, existingFiles: any[]) => {
