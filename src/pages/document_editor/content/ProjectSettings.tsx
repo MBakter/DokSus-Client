@@ -3,6 +3,7 @@ import {IconGlobe, IconImageAdd, IconImageEdit, IconInstitution, IconTrash, Icon
 import {Visibility} from "../../../data/types/Document.ts";
 import {UserSelector} from "./components/UserSelector.tsx";
 import {SingleFileType} from "../useDocumentEditor.ts";
+import {FILE_ACCEPT} from "../fileTypes.ts";
 
 interface CoverPhotoProps {
     coverFile: File | null;
@@ -154,7 +155,7 @@ export function CoverPhotoSection({ serverCover, coverPreviewUrl, onChange, onRe
                         </div>
                     )}
 
-                    <input type="file" accept="image/*" className="hidden" onChange={onChange} />
+                    <input type="file" accept={FILE_ACCEPT.image} className="hidden" onChange={onChange} />
                 </label>
 
                 <div className="flex justify-between items-center mt-5">

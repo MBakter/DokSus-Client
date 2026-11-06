@@ -1,5 +1,6 @@
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {type NamedFile, type RestorationData, type ServerNamedFile, Visibility} from "../../data/types/Document.ts";
+import {copyFile, type FileKind, invalidFilesMessage, isAllowedFile} from "./fileTypes.ts";
 import {
     createDocumentMetadata,
     deleteCover,
@@ -52,6 +53,36 @@ export enum MultiFileType {
     MODELS_3D = 'models3d',
     ADDITIONAL_PDFS = 'additionalPdfs'
 }
+
+const SINGLE_FILE_KIND: Record<SingleFileType, FileKind> = {
+    [SingleFileType.COVER]: 'image',
+    [SingleFileType.PDF]: 'pdf',
+    [SingleFileType.VIDEO]: 'video'
+};
+
+const MULTI_FILE_KIND: Record<MultiFileType, FileKind> = {
+    [MultiFileType.PROJECT_PHOTOS]: 'image',
+    [MultiFileType.MODELS_3D]: 'model',
+    [MultiFileType.ADDITIONAL_PDFS]: 'pdf'
+};
+
+type LocalFiles = {
+    cover: File | null;
+    pdf: File | null;
+    video: NamedFile | null;
+    projectPhotos: NamedFile[];
+    models3d: NamedFile[];
+    additionalPdfs: NamedFile[];
+};
+
+const emptyLocalFiles = (): LocalFiles => ({
+    cover: null,
+    pdf: null,
+    video: null,
+    projectPhotos: [],
+    models3d: [],
+    additionalPdfs: []
+});
 
 /**
  * State of the editor's form fields and metadata (visibility, co-creators, mentors).
@@ -139,14 +170,7 @@ export function useDocumentForm() {
  * `serverPaths` – files already on the server (which the user may rename or remove).
  */
 export function useDocumentFiles() {
-    const [files, setFiles] = useState<{
-        cover: File | null;
-        pdf: File | null;
-        video: NamedFile | null;
-        projectPhotos: NamedFile[];
-        models3d: NamedFile[];
-        additionalPdfs: NamedFile[];
-    }>({cover: null, pdf: null, video: null, projectPhotos: [], models3d: [], additionalPdfs: []});
+    const [files, setFiles] = useState<LocalFiles>(emptyLocalFiles);
 
     const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
 
@@ -197,43 +221,103 @@ export function useDocumentFiles() {
     };
 
     const resetLocalFiles = () => {
-        setFiles({cover: null, pdf: null, video: null, projectPhotos: [], models3d: [], additionalPdfs: []});
-        setCoverPreviewUrl(null);
+        setFiles(emptyLocalFiles());
+        setCoverPreviewUrl(prev => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+        });
     };
 
-    const handleSingleFileChange = (type: SingleFileType) => (e: Event) => {
+    // Bumped per field so a slow read of an earlier selection cannot overwrite a later one.
+    const selectionVersion = useRef<Record<SingleFileType, number>>({
+        [SingleFileType.COVER]: 0,
+        [SingleFileType.PDF]: 0,
+        [SingleFileType.VIDEO]: 0
+    });
+
+    const rememberFile = async (file: File, kind: FileKind, input: HTMLInputElement): Promise<File | null> => {
+        if (!isAllowedFile(file, kind)) {
+            alert(invalidFilesMessage([file.name], kind));
+            input.value = '';
+            return null;
+        }
+        try {
+            const stored = await copyFile(file);
+            input.value = '';
+            return stored;
+        } catch (error) {
+            console.error("Failed to read selected file", error);
+            alert(`Datoteku "${file.name}" nije moguće pročitati. Odaberite je ponovno.`);
+            input.value = '';
+            return null;
+        }
+    };
+
+    const handleSingleFileChange = (type: SingleFileType) => async (e: Event) => {
         const target = e.target as HTMLInputElement;
-        if (target.files && target.files.length > 0) {
-            const selectedFile = target.files[0];
-            if (type === SingleFileType.COVER) {
-                setFiles(prev => ({...prev, cover: selectedFile}));
-                setCoverPreviewUrl(URL.createObjectURL(selectedFile));
-            } else if (type === SingleFileType.PDF) {
-                setFiles(prev => ({...prev, pdf: selectedFile}));
-            } else if (type === SingleFileType.VIDEO) {
-                setFiles(prev => ({
+        const selectedFile = target.files?.[0];
+        if (!selectedFile) return;
+
+        const version = ++selectionVersion.current[type];
+        const stored = await rememberFile(selectedFile, SINGLE_FILE_KIND[type], target);
+        if (!stored || version !== selectionVersion.current[type]) return;
+
+        if (type === SingleFileType.COVER) {
+            setFiles(prev => ({...prev, cover: stored}));
+            setCoverPreviewUrl(prev => {
+                if (prev) URL.revokeObjectURL(prev);
+                return URL.createObjectURL(stored);
+            });
+        } else if (type === SingleFileType.PDF) {
+            setFiles(prev => ({...prev, pdf: stored}));
+        } else if (type === SingleFileType.VIDEO) {
+            setFiles(prev => {
+                if (prev.video?.previewUrl) URL.revokeObjectURL(prev.video.previewUrl);
+                return {
                     ...prev,
                     video: {
-                        file: selectedFile,
-                        name: selectedFile.name.split('.')[0],
-                        previewUrl: URL.createObjectURL(selectedFile)
-                    } as NamedFile
-                }));
-            }
+                        file: stored,
+                        name: stored.name.split('.')[0],
+                        previewUrl: URL.createObjectURL(stored)
+                    }
+                };
+            });
         }
     };
 
-    const handleMultipleFilesChange = (type: MultiFileType) => (e: Event) => {
+    const handleMultipleFilesChange = (type: MultiFileType) => async (e: Event) => {
         const target = e.target as HTMLInputElement;
-        if (target.files && target.files.length > 0) {
-            const newFiles: NamedFile[] = Array.from(target.files).map(file => ({
-                file,
-                name: file.name.split('.')[0],
-                previewUrl: URL.createObjectURL(file)
-            }));
-            setFiles(prev => ({...prev, [type]: [...prev[type], ...newFiles]}));
+        const selected = target.files ? Array.from(target.files) : [];
+        if (selected.length === 0) return;
+
+        const kind = MULTI_FILE_KIND[type];
+        const rejected = selected.filter(file => !isAllowedFile(file, kind));
+        const accepted = selected.filter(file => isAllowedFile(file, kind));
+        if (rejected.length > 0) {
+            alert(invalidFilesMessage(rejected.map(file => file.name), kind));
+        }
+        if (accepted.length === 0) {
+            target.value = '';
+            return;
+        }
+
+        let stored: File[];
+        try {
+            stored = await Promise.all(accepted.map(file => copyFile(file)));
+        } catch (error) {
+            console.error("Failed to read selected files", error);
+            alert("Odabrane datoteke nije moguće pročitati. Odaberite ih ponovno.");
+            target.value = '';
+            return;
         }
         target.value = '';
+
+        const newFiles: NamedFile[] = stored.map(file => ({
+            file,
+            name: file.name.split('.')[0],
+            previewUrl: URL.createObjectURL(file)
+        }));
+        setFiles(prev => ({...prev, [type]: [...prev[type], ...newFiles]}));
     };
 
     const handleUpdateFileName = (type: MultiFileType, index: number, newName: string) => setFiles(prev => {
@@ -321,11 +405,74 @@ export function useDocumentFiles() {
     const hasLocalFileChanges = files.cover !== null || files.pdf !== null || files.video !== null || files.projectPhotos.length > 0 || files.models3d.length > 0 || files.additionalPdfs.length > 0;
     const hasAnyFileChanges = hasServerPhotoChanges || hasServerModelChanges || hasServerVideoChanges || hasServerAdditionalPdfChanges || hasServerCoverChanges || hasServerPdfChanges || hasLocalFileChanges;
 
+    // Latest file state, including picks made while a save request is already running.
+    const fileStateRef = useRef({
+        files,
+        serverPaths,
+        initialServerState,
+        hasServerPhotoChanges,
+        hasServerModelChanges,
+        hasServerVideoChanges,
+        hasServerAdditionalPdfChanges,
+        hasServerCoverChanges,
+        hasServerPdfChanges
+    });
+    fileStateRef.current = {
+        files,
+        serverPaths,
+        initialServerState,
+        hasServerPhotoChanges,
+        hasServerModelChanges,
+        hasServerVideoChanges,
+        hasServerAdditionalPdfChanges,
+        hasServerCoverChanges,
+        hasServerPdfChanges
+    };
+
+    /**
+     * Drops local files that were uploaded. Files picked after that snapshot, and files whose
+     * upload failed (`keep`), stay in the form so the next save can send them.
+     */
+    const discardUploadedFiles = (
+        uploaded: LocalFiles,
+        keep: { cover: boolean; pdf: boolean; video: boolean; projectPhotos: boolean; models3d: boolean; additionalPdfs: boolean }
+    ) => {
+        const dropPreview = (item: NamedFile) => {
+            if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+        };
+        if (!keep.projectPhotos) uploaded.projectPhotos.forEach(dropPreview);
+        if (!keep.models3d) uploaded.models3d.forEach(dropPreview);
+        if (!keep.additionalPdfs) uploaded.additionalPdfs.forEach(dropPreview);
+
+        setFiles(prev => {
+            const clearCover = !keep.cover && uploaded.cover !== null && prev.cover === uploaded.cover;
+            const clearPdf = !keep.pdf && uploaded.pdf !== null && prev.pdf === uploaded.pdf;
+            const clearVideo = !keep.video && uploaded.video !== null && prev.video === uploaded.video;
+            if (clearCover) {
+                setCoverPreviewUrl(url => {
+                    if (url) URL.revokeObjectURL(url);
+                    return null;
+                });
+            }
+            if (clearVideo && prev.video?.previewUrl) URL.revokeObjectURL(prev.video.previewUrl);
+            return {
+                cover: clearCover ? null : prev.cover,
+                pdf: clearPdf ? null : prev.pdf,
+                video: clearVideo ? null : prev.video,
+                projectPhotos: keep.projectPhotos ? prev.projectPhotos : prev.projectPhotos.filter(photo => !uploaded.projectPhotos.includes(photo)),
+                models3d: keep.models3d ? prev.models3d : prev.models3d.filter(model => !uploaded.models3d.includes(model)),
+                additionalPdfs: keep.additionalPdfs ? prev.additionalPdfs : prev.additionalPdfs.filter(pdf => !uploaded.additionalPdfs.includes(pdf))
+            };
+        });
+    };
+
     return {
         files,
         serverPaths,
         initialServerState,
         coverPreviewUrl,
+        getFileSnapshot: () => fileStateRef.current,
+        discardUploadedFiles,
         handleSingleFileChange,
         handleMultipleFilesChange,
         handleUpdateFileName,
@@ -360,6 +507,7 @@ export function useDocumentFiles() {
 export function useDocumentEditor(id?: string) {
     const [documentId, setDocumentId] = useState<string | null>(id || null);
     const [isSaving, setIsSaving] = useState(false);
+    const isSavingRef = useRef(false);
     const [isLoading, setIsLoading] = useState(!!id);
 
     // Mount sub-hooks
@@ -461,7 +609,10 @@ export function useDocumentEditor(id?: string) {
     const hasChanges = formManager.hasChanges || fileManager.hasAnyFileChanges;
 
     const handleSave = async (publish: boolean) => {
+        if (isSavingRef.current) return;
+        isSavingRef.current = true;
         setIsSaving(true);
+        try {
         const failedTasks: string[] = [];
         let currentDocId = documentId;
 
@@ -472,11 +623,30 @@ export function useDocumentEditor(id?: string) {
             });
         };
 
+        const task = {
+            cover: "Spremanje naslovne fotografije",
+            deleteCover: "Brisanje naslovne fotografije",
+            pdf: "Spremanje PDF dokumenta",
+            deletePdf: "Brisanje PDF dokumenta",
+            additionalPdfs: "Prijenos novih dodatnih PDF-ova",
+            syncAdditionalPdfs: "Ažuriranje postojećih dodatnih PDF-ova",
+            video: "Spremanje videa",
+            deleteVideo: "Brisanje videa",
+            renameVideo: "Preimenovanje videa",
+            photos: "Prijenos novih fotografija",
+            syncPhotos: "Ažuriranje postojećih fotografija",
+            models: "Prijenos novih 3D modela",
+            syncModels: "Ažuriranje postojećih 3D modela"
+        };
+
+        let pendingFiles = emptyLocalFiles();
+
         try {
             // Publishing needs the cover and PDF to already be stored. When they are only
             // selected locally, save as a draft first and publish after the uploads succeed.
-            const coverAlreadyStored = Boolean(fileManager.serverPaths.cover?.trim()) && !fileManager.files.cover;
-            const pdfAlreadyStored = Boolean(fileManager.serverPaths.pdf?.trim()) && !fileManager.files.pdf;
+            const before = fileManager.getFileSnapshot();
+            const coverAlreadyStored = Boolean(before.serverPaths.cover?.trim()) && !before.files.cover;
+            const pdfAlreadyStored = Boolean(before.serverPaths.pdf?.trim()) && !before.files.pdf;
             const publishImmediately = publish && coverAlreadyStored && pdfAlreadyStored;
             const keepPublished = formManager.metadata.isPublished && publish;
 
@@ -500,72 +670,114 @@ export function useDocumentEditor(id?: string) {
             if (!currentDocId) throw new Error("Neuspješno dohvaćanje ID-a dokumenta.");
             const docId = currentDocId;
 
-            // CONCURRENT FILES
+            // Read again so files chosen while the metadata request was in flight are included.
+            const pending = fileManager.getFileSnapshot();
+            pendingFiles = pending.files;
+            const stored = {
+                cover: false,
+                pdf: false,
+                video: false,
+                additionalPdfs: false,
+                projectPhotos: false,
+                models3d: false
+            };
+
             const fileTasks: Array<() => Promise<unknown>> = [];
 
-            if (fileManager.files.cover) {
-                const cover = fileManager.files.cover;
-                fileTasks.push(() => safeTask(uploadCover(docId, cover), "Spremanje naslovne fotografije"));
-            } else if (fileManager.hasServerCoverChanges && !fileManager.serverPaths.cover) {
-                fileTasks.push(() => safeTask(deleteCover(docId), "Brisanje naslovne fotografije"));
+            if (pending.files.cover) {
+                const cover = pending.files.cover;
+                fileTasks.push(() => safeTask(uploadCover(docId, cover).then(() => {
+                    stored.cover = true;
+                }), task.cover));
+            } else if (pending.hasServerCoverChanges && !pending.serverPaths.cover) {
+                fileTasks.push(() => safeTask(deleteCover(docId), task.deleteCover));
             }
 
-            if (fileManager.files.pdf) {
-                const pdf = fileManager.files.pdf;
-                fileTasks.push(() => safeTask(uploadPdf(docId, pdf), "Spremanje PDF dokumenta"));
-            } else if (fileManager.hasServerPdfChanges && !fileManager.serverPaths.pdf) {
-                fileTasks.push(() => safeTask(deletePdf(docId), "Brisanje PDF dokumenta"));
+            if (pending.files.pdf) {
+                const pdf = pending.files.pdf;
+                fileTasks.push(() => safeTask(uploadPdf(docId, pdf).then(() => {
+                    stored.pdf = true;
+                }), task.pdf));
+            } else if (pending.hasServerPdfChanges && !pending.serverPaths.pdf) {
+                fileTasks.push(() => safeTask(deletePdf(docId), task.deletePdf));
             }
 
-            if (fileManager.hasServerAdditionalPdfChanges) {
+            if (pending.hasServerAdditionalPdfChanges) {
                 fileTasks.push(() => safeTask(
-                    syncAdditionalPdfs(docId, fileManager.serverPaths.additionalPdfs),
-                    "Ažuriranje postojećih dodatnih PDF-ova"
+                    syncAdditionalPdfs(docId, pending.serverPaths.additionalPdfs),
+                    task.syncAdditionalPdfs
                 ));
             }
-            if (fileManager.files.additionalPdfs.length > 0) {
-                fileTasks.push(() => safeTask(
-                    uploadAdditionalPdfs(
-                        docId,
-                        fileManager.files.additionalPdfs.map(p => p.file),
-                        fileManager.files.additionalPdfs.map(p => p.name)
-                    ),
-                    "Prijenos novih dodatnih PDF-ova"
-                ));
+            if (pending.files.additionalPdfs.length > 0) {
+                const additionalPdfs = pending.files.additionalPdfs;
+                fileTasks.push(() => safeTask(uploadAdditionalPdfs(
+                    docId,
+                    additionalPdfs.map(p => p.file),
+                    additionalPdfs.map(p => p.name),
+                    pending.serverPaths.additionalPdfs.map(pdf => pdf.path)
+                ).then(() => {
+                    stored.additionalPdfs = true;
+                }), task.additionalPdfs));
             }
 
-            if (fileManager.files.video) {
-                const video = fileManager.files.video;
-                fileTasks.push(() => safeTask(uploadVideo(docId, video.file, video.name), "Spremanje videa"));
-            } else if (!fileManager.serverPaths.video && fileManager.initialServerState.video) {
-                fileTasks.push(() => safeTask(syncVideo(docId, null), "Brisanje videa"));
-            } else if (fileManager.serverPaths.video && fileManager.hasServerVideoChanges) {
-                fileTasks.push(() => safeTask(syncVideo(docId, fileManager.serverPaths.video), "Preimenovanje videa"));
+            if (pending.files.video) {
+                const video = pending.files.video;
+                fileTasks.push(() => safeTask(uploadVideo(docId, video.file, video.name).then(() => {
+                    stored.video = true;
+                }), task.video));
+            } else if (!pending.serverPaths.video && pending.initialServerState.video) {
+                fileTasks.push(() => safeTask(syncVideo(docId, null), task.deleteVideo));
+            } else if (pending.serverPaths.video && pending.hasServerVideoChanges) {
+                fileTasks.push(() => safeTask(syncVideo(docId, pending.serverPaths.video), task.renameVideo));
             }
 
-            if (fileManager.hasServerPhotoChanges) {
-                fileTasks.push(() => safeTask(syncProjectPhotos(docId, fileManager.serverPaths.projectPhotos), "Ažuriranje postojećih fotografija"));
+            if (pending.hasServerPhotoChanges) {
+                fileTasks.push(() => safeTask(syncProjectPhotos(docId, pending.serverPaths.projectPhotos), task.syncPhotos));
             }
-            if (fileManager.files.projectPhotos.length > 0) {
-                fileTasks.push(() => safeTask(uploadProjectPhotos(docId, fileManager.files.projectPhotos.map(p => p.file), fileManager.files.projectPhotos.map(p => p.name)), "Prijenos novih fotografija"));
+            if (pending.files.projectPhotos.length > 0) {
+                const projectPhotos = pending.files.projectPhotos;
+                fileTasks.push(() => safeTask(uploadProjectPhotos(
+                    docId,
+                    projectPhotos.map(p => p.file),
+                    projectPhotos.map(p => p.name),
+                    pending.serverPaths.projectPhotos.map(photo => photo.path)
+                ).then(() => {
+                    stored.projectPhotos = true;
+                }), task.photos));
             }
 
-            if (fileManager.hasServerModelChanges) {
-                fileTasks.push(() => safeTask(syncModels3d(docId, fileManager.serverPaths.models3d), "Ažuriranje postojećih 3D modela"));
+            if (pending.hasServerModelChanges) {
+                fileTasks.push(() => safeTask(syncModels3d(docId, pending.serverPaths.models3d), task.syncModels));
             }
-            if (fileManager.files.models3d.length > 0) {
-                fileTasks.push(() => safeTask(uploadModels3d(docId, fileManager.files.models3d.map(m => m.file), fileManager.files.models3d.map(m => m.name)), "Prijenos novih 3D modela"));
+            if (pending.files.models3d.length > 0) {
+                const models3d = pending.files.models3d;
+                fileTasks.push(() => safeTask(uploadModels3d(
+                    docId,
+                    models3d.map(m => m.file),
+                    models3d.map(m => m.name),
+                    pending.serverPaths.models3d.map(model => model.path)
+                ).then(() => {
+                    stored.models3d = true;
+                }), task.models));
             }
 
-            // One after another: each call reads and saves the whole document, so parallel calls would overwrite each other.
-            for (const task of fileTasks) await task();
+            // One after another. Each call updates only its own file field, but a later sync still
+            // needs to see files uploaded before it, so they must not run at the same time.
+            for (const fileTask of fileTasks) await fileTask();
 
-            const requiredFileFailed = failedTasks.some(task =>
-                task.startsWith("Spremanje naslovne") ||
-                task.startsWith("Spremanje PDF") ||
-                task.startsWith("Brisanje naslovne") ||
-                task.startsWith("Brisanje PDF")
-            );
+            fileManager.discardUploadedFiles(pendingFiles, {
+                cover: Boolean(pendingFiles.cover) && !stored.cover,
+                pdf: Boolean(pendingFiles.pdf) && !stored.pdf,
+                video: Boolean(pendingFiles.video) && !stored.video,
+                additionalPdfs: pendingFiles.additionalPdfs.length > 0 && !stored.additionalPdfs,
+                projectPhotos: pendingFiles.projectPhotos.length > 0 && !stored.projectPhotos,
+                models3d: pendingFiles.models3d.length > 0 && !stored.models3d
+            });
+
+            const requiredFileFailed = failedTasks.includes(task.cover) ||
+                failedTasks.includes(task.pdf) ||
+                failedTasks.includes(task.deleteCover) ||
+                failedTasks.includes(task.deletePdf);
 
             // Drafts become published only after the required files are actually stored.
             if (publish && !publishImmediately && !requiredFileFailed) {
@@ -576,7 +788,7 @@ export function useDocumentEditor(id?: string) {
             formManager.metadata.setIsPublished(isPublishedNow);
 
             if (failedTasks.length > 0) {
-                alert(`Spremljeno s greškama. Sljedeće operacije nisu uspjele:\n\n- ${failedTasks.join('\n- ')}\n\nMolimo pokušajte ponovno dodati ove datoteke.`);
+                alert(`Spremljeno s greškama. Sljedeće operacije nisu uspjele:\n\n- ${failedTasks.join('\n- ')}\n\nTe datoteke su ostale u obrascu. Pritisnite spremanje ponovno.`);
             } else if (publish && isPublishedNow) {
                 window.location.href = '/racun';
                 return;
@@ -584,18 +796,16 @@ export function useDocumentEditor(id?: string) {
         } catch (error) {
             console.error("Critical metadata save failure:", error);
             alert("Dogodila se greška prilikom spremanja projekta. Provjerite internetsku vezu i pokušajte ponovno.");
-            setIsSaving(false);
             return;
         }
 
         try {
-            if (currentDocId) {
-                await loadExistingDocument(currentDocId);
-                fileManager.resetLocalFiles();
-            }
+            if (currentDocId) await loadExistingDocument(currentDocId);
         } catch (resyncError) {
             console.error("Failed to resync state after save", resyncError);
+        }
         } finally {
+            isSavingRef.current = false;
             setIsSaving(false);
         }
     };

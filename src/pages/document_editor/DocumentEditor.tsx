@@ -1,4 +1,5 @@
 import {SingleFileType, useDocumentEditor} from "./useDocumentEditor.ts";
+import {FILE_ACCEPT} from "./fileTypes.ts";
 import {useEffect, useState} from "preact/hooks";
 import {RestorationDataFields,} from "./content/RestorationDataFields.tsx";
 import {ProjectSettings} from "./content/ProjectSettings.tsx";
@@ -187,7 +188,7 @@ export function PdfSection({ pdfFile, serverPdf, onChange, onRemove }: any) {
                     >
 
                         Odaberi PDF
-                        <input type="file" accept=".pdf" className="hidden" onChange={onChange}/>
+                        <input type="file" accept={FILE_ACCEPT.pdf} className="hidden" onChange={onChange}/>
                     </label>
 
                     {(serverPdf || pdfFile) && (

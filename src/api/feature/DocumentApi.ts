@@ -10,8 +10,19 @@ import axiosClient from "../AxiosClient.ts";
 const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
 
 const uploadConfig = {
-    timeout: UPLOAD_TIMEOUT_MS,
-    headers: {'Content-Type': 'multipart/form-data'}
+    timeout: UPLOAD_TIMEOUT_MS
+};
+
+/** Fields the upload endpoints echo back. Used to notice a 200 that did not actually store the file. */
+type StoredFiles = {
+    files?: {
+        coverPath?: string | null;
+        pdfPath?: string | null;
+        additionalPdfs?: { path?: string | null }[];
+        projectPhotos?: { path?: string | null }[];
+        models3d?: { path?: string | null }[];
+        video?: { path?: string | null } | null;
+    };
 };
 
 /** Paginated, filterable list of published documents for the home and group pages. */
@@ -50,7 +61,9 @@ export const fetchMyDocuments = async (): Promise<Document[]> => {
 };
 
 export const fetchDocumentById = async (id: string): Promise<Document> => {
-    const response = await axiosClient.get<Document>(`/documents/${id}`);
+    const response = await axiosClient.get<Document>(`/documents/${id}`, {
+        headers: {'Cache-Control': 'no-cache', Pragma: 'no-cache'}
+    });
     return response.data;
 };
 
@@ -79,12 +92,15 @@ export const updateDocumentCreator = async (id: string, newCreatorEmail: string)
     return response.data;
 };
 
-// Axios automatically sets the correct multipart/form-data boundary when passing FormData
+// FormData is sent without a manual Content-Type so the browser adds the multipart boundary.
 export const uploadCover = async (id: string, file: File) => {
     const formData = new FormData();
     formData.append("cover", file);
 
-    const response = await axiosClient.post(`/documents/${id}/cover`, formData, uploadConfig);
+    const response = await axiosClient.post<StoredFiles>(`/documents/${id}/cover`, formData, uploadConfig);
+    if (!response.data.files?.coverPath) {
+        throw new Error("Naslovna fotografija nije spremljena.");
+    }
     return response.data;
 };
 
@@ -96,7 +112,10 @@ export const uploadPdf = async (id: string, file: File) => {
     const formData = new FormData();
     formData.append("pdf", file);
 
-    const response = await axiosClient.post(`/documents/${id}/pdf`, formData, uploadConfig);
+    const response = await axiosClient.post<StoredFiles>(`/documents/${id}/pdf`, formData, uploadConfig);
+    if (!response.data.files?.pdfPath) {
+        throw new Error("PDF dokument nije spremljen.");
+    }
     return response.data;
 };
 
@@ -104,13 +123,21 @@ export const deletePdf = async (id: string) => {
     await axiosClient.delete(`/documents/${id}/pdf`);
 };
 
-export const uploadAdditionalPdfs = async (id: string, files: File[], names: string[]) => {
+const assertNewPath = (paths: { path?: string | null }[] | undefined, known: Set<string>, failure: string) => {
+    const added = (paths ?? []).map(item => item.path).find(path => path && !known.has(path));
+    if (!added) throw new Error(failure);
+    known.add(added);
+};
+
+export const uploadAdditionalPdfs = async (id: string, files: File[], names: string[], existingPaths: string[]) => {
     // One request per file, so a batch is not limited by the total request size.
+    const known = new Set(existingPaths);
     for (let index = 0; index < files.length; index++) {
         const formData = new FormData();
         formData.append("pdfs", files[index]);
         formData.append("pdfNames", names[index]);
-        await axiosClient.post(`/documents/${id}/additional-pdfs`, formData, uploadConfig);
+        const response = await axiosClient.post<StoredFiles>(`/documents/${id}/additional-pdfs`, formData, uploadConfig);
+        assertNewPath(response.data.files?.additionalPdfs, known, "Dodatni PDF nije spremljen.");
     }
 };
 
@@ -124,7 +151,10 @@ export const uploadVideo = async (id: string, file: File, name: string) => {
     formData.append("video", file);
     formData.append("videoName", name);
 
-    const response = await axiosClient.post(`/documents/${id}/video`, formData, uploadConfig);
+    const response = await axiosClient.post<StoredFiles>(`/documents/${id}/video`, formData, uploadConfig);
+    if (!response.data.files?.video?.path) {
+        throw new Error("Video nije spremljen.");
+    }
     return response.data;
 };
 
@@ -133,12 +163,14 @@ export const syncVideo = async (id: string, existingVideo: any | null) => {
     return response.data;
 };
 
-export const uploadProjectPhotos = async (id: string, files: File[], names: string[]) => {
+export const uploadProjectPhotos = async (id: string, files: File[], names: string[], existingPaths: string[]) => {
+    const known = new Set(existingPaths);
     for (let index = 0; index < files.length; index++) {
         const formData = new FormData();
         formData.append("projectPhotos", files[index]);
         formData.append("projectPhotoNames", names[index]);
-        await axiosClient.post(`/documents/${id}/photos`, formData, uploadConfig);
+        const response = await axiosClient.post<StoredFiles>(`/documents/${id}/photos`, formData, uploadConfig);
+        assertNewPath(response.data.files?.projectPhotos, known, "Fotografija nije spremljena.");
     }
 };
 
@@ -147,12 +179,14 @@ export const syncProjectPhotos = async (id: string, existingFiles: any[]) => {
     return response.data;
 };
 
-export const uploadModels3d = async (id: string, files: File[], names: string[]) => {
+export const uploadModels3d = async (id: string, files: File[], names: string[], existingPaths: string[]) => {
+    const known = new Set(existingPaths);
     for (let index = 0; index < files.length; index++) {
         const formData = new FormData();
         formData.append("models3d", files[index]);
         formData.append("models3dNames", names[index]);
-        await axiosClient.post(`/documents/${id}/models`, formData, uploadConfig);
+        const response = await axiosClient.post<StoredFiles>(`/documents/${id}/models`, formData, uploadConfig);
+        assertNewPath(response.data.files?.models3d, known, "3D model nije spremljen.");
     }
 };
 

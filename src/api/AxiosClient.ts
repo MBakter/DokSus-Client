@@ -27,6 +27,14 @@ axiosClient.interceptors.request.use(
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        // The instance default is application/json. Leaving that on a FormData body makes axios
+        // send the file as JSON, so the server stores nothing. Let the browser set the multipart boundary.
+        if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+            const headers = config.headers as { setContentType?: (value: unknown) => void };
+            if (typeof headers.setContentType === 'function') {
+                headers.setContentType(false);
+            }
+        }
         return config;
     },
     (error) => {

@@ -6,6 +6,7 @@ import {Zoom} from "yet-another-react-lightbox/plugins";
 import "yet-another-react-lightbox/styles.css";
 import '@google/model-viewer';
 import {MultiFileType, SingleFileType, type useDocumentFiles} from "../useDocumentEditor.ts";
+import {FILE_ACCEPT} from "../fileTypes.ts";
 import type {NamedFile, ServerNamedFile} from "../../../data/types/Document.ts";
 
 /** Editor section for additional PDFs, project photos, 3D models and the video. */
@@ -92,7 +93,7 @@ export function AdditionalPdfsSection(
                     <label
                         className="cursor-pointer inline-flex items-center justify-center bg-white border-2 border-dashed border-slate-300 text-slate-700 font-medium text-sm py-2.5 px-6 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-all">
                         Dodaj PDF priloge
-                        <input type="file" multiple accept=".pdf" className="hidden" onChange={onMultipleFilesChange}/>
+                        <input type="file" multiple accept={FILE_ACCEPT.pdf} className="hidden" onChange={onMultipleFilesChange}/>
                     </label>
                 </div>
 
@@ -284,7 +285,7 @@ export function PhotosSection(
             <label
                 className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
                 + Dodaj nove fotografije
-                <input type="file" accept="image/*" multiple className="hidden" onChange={onMultipleFilesChange}/>
+                <input type="file" accept={FILE_ACCEPT.image} multiple className="hidden" onChange={onMultipleFilesChange}/>
             </label>
         </section>
     );
@@ -464,7 +465,7 @@ export function Models3DSection(
             <label
                 className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-4 rounded hover:bg-slate-50 mt-2">
                 + Dodaj nove modele
-                <input type="file" accept=".obj,.gltf,.glb" multiple className="hidden"
+                <input type="file" accept={FILE_ACCEPT.model} multiple className="hidden"
                        onChange={onMultipleFilesChange}/>
             </label>
         </section>
@@ -536,7 +537,7 @@ export function VideoSection(
                     <label
                         className="cursor-pointer inline-block bg-white border border-slate-300 text-slate-700 font-medium text-sm py-2 px-6 rounded-md hover:border-blue-500 transition-colors shadow-sm">
                         Odaberi video
-                        <input type="file" accept="video/*" className="hidden" onChange={onChange}/>
+                        <input type="file" accept={FILE_ACCEPT.video} className="hidden" onChange={onChange}/>
                     </label>
                 </div>
             )}
