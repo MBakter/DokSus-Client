@@ -2,6 +2,7 @@ import {useContext, useState} from 'preact/hooks';
 import {loginUser, registerUser} from '../api/AuthApi';
 import {type ErrorCode, ErrorCode as ErrorCodes} from "../api/types/ErrorCode.ts";
 import {AuthContext} from "../context/AuthContext.tsx";
+import {CONTACT_EMAIL} from "../data/Site.ts";
 
 /** Registration form logic: registers the account, then logs in automatically. */
 export function useRegister() {
@@ -67,7 +68,7 @@ export function Register() {
 
                 {errorCode === ErrorCodes.NOT_WHITELISTED && (
                     <div className="bg-red-50 text-red-700 p-3.5 rounded-md mb-6 text-sm border border-red-200 font-medium leading-relaxed">
-                        Vaša email adresa nije pronađena na popisu ovlaštenih korisnika. Za odobrenje pristupa, molimo kontaktirajte instituciju. Detalje možete pronaći na <a href="/kontakt" className="underline font-bold hover:text-red-900">kontakt stranici</a>.
+                        Vaša email adresa nije pronađena na popisu ovlaštenih korisnika. Za odobrenje pristupa, molimo kontaktirajte nas na <a href={`mailto:${CONTACT_EMAIL}`} className="underline font-bold hover:text-red-900">{CONTACT_EMAIL}</a>.
                     </div>
                 )}
 

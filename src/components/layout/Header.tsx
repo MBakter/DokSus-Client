@@ -139,10 +139,6 @@ export function TopBar() {
 
             {/* Actions */}
             <div className="flex items-center gap-6">
-                <a href="/kontakt" className="text-slate-600 font-medium hover:text-blue-900 transition-colors text-base">
-                    Kontakt
-                </a>
-
                 {isAuthenticated ? (
                     <button
                         onClick={logout}

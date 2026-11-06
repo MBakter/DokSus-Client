@@ -4,6 +4,7 @@ import type {Document, PaginatedResponse} from '../data/types/Document.ts';
 import {fetchDocuments} from "../api/feature/DocumentApi.ts";
 import {DocumentCard} from "../components/feature/DocumentCard.tsx";
 import {type ReferenceCategory, useCategoryReference, useGroupReference} from "../data/reference/ReferenceData.ts";
+import {CONTACT_EMAIL} from "../data/Site.ts";
 
 interface HomeProps {
     url?: string; // Injected automatically by preact-router
@@ -81,7 +82,7 @@ export function Home({url}: HomeProps) {
         : "Sve Kategorije";
 
     return (
-        <div className="w-full flex flex-col items-center pb-16 bg-slate-50 min-h-screen">
+        <div className="w-full flex flex-col items-center bg-slate-50 min-h-[calc(100vh-140px)]">
 
             {/* Filter Panel Background Wrapper */}
             <div className="w-full max-w-6xl px-4 lg:px-0 mt-8 mb-2">
@@ -213,6 +214,18 @@ export function Home({url}: HomeProps) {
                     </button>
                 </div>
             )}
+
+            <footer className="w-full mt-auto border-t border-slate-200 bg-white">
+                <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500">
+                    <span>© {new Date().getFullYear()} DokSus. Sva prava pridržana.</span>
+                    <span>
+                        Kontakt:{" "}
+                        <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-900 font-medium hover:underline">
+                            {CONTACT_EMAIL}
+                        </a>
+                    </span>
+                </div>
+            </footer>
         </div>
     );
 }
